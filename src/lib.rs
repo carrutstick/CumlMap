@@ -37,7 +37,7 @@ where
         let mut column_size = 1;
         while column_size < cap {
             ret.tables.push(vec![V::zero(); column_size]);
-            column_size << 1;
+            column_size = column_size << 1;
         }
         ret
     }
@@ -51,18 +51,36 @@ where
     type Value = V;
 
     fn insert(&mut self, key: Self::Key, val: Self::Value) {
-        unimplemented!();
+        assert!(key < self.capacity);
+        self.total = self.total + val;
+        let mut bit: usize = self.tables.len();
+        for ref mut tbl in self.tables.iter_mut() {
+            bit -= 1;
+            if (key & (1 << bit)) != 0 { continue }
+            let j = key >> (bit + 1);
+            tbl[j] = tbl[j] + val;
+        }
     }
 
     fn get_cuml(&self, key: Self::Key) -> Self::Value {
-        unimplemented!();
+        if key >= self.capacity - 1 { return self.total }
+        let key = key + 1;
+        let mut acc: Self::Value = Self::Value::zero();
+        let mut bit: usize = self.tables.len();
+        for ref tbl in self.tables.iter() {
+            bit -= 1;
+            if (key & (1 << bit)) == 0 { continue }
+            let j = key >> (bit + 1);
+            acc = acc + tbl[j];
+        }
+        acc
     }
 
     fn get_single(&self, key: Self::Key) -> Self::Value {
         unimplemented!();
     }
 
-    fn get_quantile(&self, key: Self::Value) -> Self::Key {
+    fn get_quantile(&self, quant: Self::Value) -> Self::Key {
         unimplemented!();
     }
 }
@@ -107,7 +125,7 @@ where
         unimplemented!();
     }
 
-    fn get_quantile(&self, key: Self::Value) -> Self::Key {
+    fn get_quantile(&self, quant: Self::Value) -> Self::Key {
         unimplemented!();
     }
 }
@@ -118,6 +136,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn it_works() {
         assert_eq!(2 + 2, 4);
