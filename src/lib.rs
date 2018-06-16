@@ -45,7 +45,7 @@ where
 
 impl<V> CumlMap for CumlFreqTable<V>
 where
-    V: Add + Sub + Zero + Copy,
+    V: Add<Output=V> + Sub<Output=V> + Zero + Copy + PartialOrd,
 {
     type Key = usize;
     type Value = V;
@@ -77,11 +77,27 @@ where
     }
 
     fn get_single(&self, key: Self::Key) -> Self::Value {
-        unimplemented!();
+        assert!(key < self.capacity);
+        if key > 0 {
+            self.get_cuml(key) - self.get_cuml(key - 1)
+        } else {
+            self.tables[self.tables.len()-1][0]
+        }
     }
 
     fn get_quantile(&self, quant: Self::Value) -> Self::Key {
-        unimplemented!();
+        assert!(quant <= self.total);
+        let mut index = 0;
+        let mut acc = Self::Value::zero();
+        for ref tbl in self.tables.iter() {
+            if tbl[index] + acc >= quant {
+                index = index << 1
+            } else {
+                acc = acc + tbl[index];
+                index = (index << 1) + 1
+            }
+        }
+        index
     }
 }
 
@@ -160,6 +176,14 @@ mod tests {
         assert_eq!(t.get_cuml(1), 3);
         assert_eq!(t.get_cuml(2), 6);
         assert_eq!(t.get_cuml(3), 11);
+
+        assert_eq!(t.get_quantile(0), 0);
+        assert_eq!(t.get_quantile(1), 0);
+        assert_eq!(t.get_quantile(2), 1);
+        assert_eq!(t.get_quantile(3), 1);
+        assert_eq!(t.get_quantile(4), 2);
+        assert_eq!(t.get_quantile(6), 2);
+        assert_eq!(t.get_quantile(10), 3);
     }
 
     #[test]
