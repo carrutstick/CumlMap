@@ -130,11 +130,24 @@ where
     type Value = V;
 
     fn insert(&mut self, key: Self::Key, val: Self::Value) {
-        unimplemented!();
+        assert!(key < self.capacity);
+        let mut key = key;
+        while key < self.capacity {
+            self.data[key as usize] = self.data[key as usize] + val;
+            if key == 0 { break }
+            key += (1 << key.trailing_zeros());
+        }
     }
 
     fn get_cuml(&self, key: Self::Key) -> Self::Value {
-        unimplemented!();
+        assert!(key < self.capacity);
+        let mut key = key;
+        let mut sum = self.data[0];
+        while key > 0 {
+            sum = sum + self.data[key];
+            key = key & (key - 1);
+        }
+        sum
     }
 
     fn get_single(&self, key: Self::Key) -> Self::Value {
