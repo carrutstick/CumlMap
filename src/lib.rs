@@ -124,7 +124,7 @@ where
 
 impl<V> CumlMap for BinaryIndexTree<V>
 where
-    V: Add + Sub + Zero + Copy,
+    V: Add<Output=V> + Sub<Output=V> + Zero + Copy + PartialOrd,
 {
     type Key = usize;
     type Value = V;
@@ -151,11 +151,31 @@ where
     }
 
     fn get_single(&self, key: Self::Key) -> Self::Value {
-        unimplemented!();
+        let mut val = self.data[key];
+        let mut key = key;
+        if key == 0 { return val }
+        let mut parent = key & (key - 1);
+        key -= 1;
+        while parent != key {
+            val = val - self.data[key];
+            key = key & (key - 1);
+        }
+        val
     }
 
     fn get_quantile(&self, quant: Self::Value) -> Self::Key {
-        unimplemented!();
+        let mut index = 0;
+        let mut mask = self.capacity / 2;
+        let mut quant = quant - self.data[0];
+        while mask != 0 {
+            let test = index + mask;
+            if quant >= self.data[test] {
+                quant = quant - self.data[test];
+                index = test;
+            }
+            mask >>= 1;
+        }
+        if quant > Self::Value::zero() { index + 1 } else { index }
     }
 }
 
@@ -216,5 +236,13 @@ mod tests {
         assert_eq!(t.get_cuml(1), 3);
         assert_eq!(t.get_cuml(2), 6);
         assert_eq!(t.get_cuml(3), 11);
+
+        assert_eq!(t.get_quantile(0), 0);
+        assert_eq!(t.get_quantile(1), 0);
+        assert_eq!(t.get_quantile(2), 1);
+        assert_eq!(t.get_quantile(3), 1);
+        assert_eq!(t.get_quantile(4), 2);
+        assert_eq!(t.get_quantile(6), 2);
+        assert_eq!(t.get_quantile(10), 3);
     }
 }
