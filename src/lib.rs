@@ -45,7 +45,7 @@ where
 
 impl<V> CumlMap for CumlFreqTable<V>
 where
-    V: Add<Output=V> + Sub<Output=V> + Zero + Copy + PartialOrd,
+    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + PartialOrd,
 {
     type Key = usize;
     type Value = V;
@@ -56,20 +56,26 @@ where
         let mut bit: usize = self.tables.len();
         for ref mut tbl in self.tables.iter_mut() {
             bit -= 1;
-            if (key & (1 << bit)) != 0 { continue }
+            if (key & (1 << bit)) != 0 {
+                continue;
+            }
             let j = key >> (bit + 1);
             tbl[j] = tbl[j] + val;
         }
     }
 
     fn get_cuml(&self, key: Self::Key) -> Self::Value {
-        if key >= self.capacity - 1 { return self.total }
+        if key >= self.capacity - 1 {
+            return self.total;
+        }
         let key = key + 1;
         let mut acc: Self::Value = Self::Value::zero();
         let mut bit: usize = self.tables.len();
         for ref tbl in self.tables.iter() {
             bit -= 1;
-            if (key & (1 << bit)) == 0 { continue }
+            if (key & (1 << bit)) == 0 {
+                continue;
+            }
             let j = key >> (bit + 1);
             acc = acc + tbl[j];
         }
@@ -81,7 +87,7 @@ where
         if key > 0 {
             self.get_cuml(key) - self.get_cuml(key - 1)
         } else {
-            self.tables[self.tables.len()-1][0]
+            self.tables[self.tables.len() - 1][0]
         }
     }
 
@@ -124,7 +130,7 @@ where
 
 impl<V> CumlMap for BinaryIndexTree<V>
 where
-    V: Add<Output=V> + Sub<Output=V> + Zero + Copy + PartialOrd,
+    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + PartialOrd,
 {
     type Key = usize;
     type Value = V;
@@ -134,7 +140,9 @@ where
         let mut key = key;
         while key < self.capacity {
             self.data[key as usize] = self.data[key as usize] + val;
-            if key == 0 { break }
+            if key == 0 {
+                break;
+            }
             key += (1 << key.trailing_zeros());
         }
     }
@@ -153,7 +161,9 @@ where
     fn get_single(&self, key: Self::Key) -> Self::Value {
         let mut val = self.data[key];
         let mut key = key;
-        if key == 0 { return val }
+        if key == 0 {
+            return val;
+        }
         let mut parent = key & (key - 1);
         key -= 1;
         while parent != key {
@@ -175,7 +185,11 @@ where
             }
             mask >>= 1;
         }
-        if quant > Self::Value::zero() { index + 1 } else { index }
+        if quant > Self::Value::zero() {
+            index + 1
+        } else {
+            index
+        }
     }
 }
 
