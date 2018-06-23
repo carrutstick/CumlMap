@@ -1,3 +1,4 @@
+#![feature(test)]
 extern crate num_traits;
 
 use num_traits::Zero;
@@ -7,6 +8,7 @@ pub trait CumlMap {
     type Key;
     type Value;
 
+    fn with_capacity(Self::Key) -> Self;
     fn insert(&mut self, Self::Key, Self::Value);
     fn get_cuml(&self, Self::Key) -> Self::Value;
     fn get_single(&self, Self::Key) -> Self::Value;
@@ -23,10 +25,13 @@ struct CumlFreqTable<V> {
     tables: Vec<Vec<V>>,
 }
 
-impl<V> CumlFreqTable<V>
+impl<V> CumlMap for CumlFreqTable<V>
 where
-    V: Add + Sub + Zero + Copy,
+    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + PartialOrd,
 {
+    type Key = usize;
+    type Value = V;
+
     fn with_capacity(c: usize) -> CumlFreqTable<V> {
         let cap = c.next_power_of_two();
         let mut ret = CumlFreqTable {
@@ -41,14 +46,6 @@ where
         }
         ret
     }
-}
-
-impl<V> CumlMap for CumlFreqTable<V>
-where
-    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + PartialOrd,
-{
-    type Key = usize;
-    type Value = V;
 
     fn insert(&mut self, key: Self::Key, val: Self::Value) {
         assert!(key < self.capacity);
@@ -116,24 +113,19 @@ struct BinaryIndexTree<V> {
     data: Vec<V>,
 }
 
-impl<V> BinaryIndexTree<V>
-where
-    V: Add + Sub + Zero + Copy,
-{
-    fn with_capacity(c: usize) -> BinaryIndexTree<V> {
-        BinaryIndexTree {
-            capacity: c,
-            data: vec![V::zero(); c],
-        }
-    }
-}
-
 impl<V> CumlMap for BinaryIndexTree<V>
 where
     V: Add<Output = V> + Sub<Output = V> + Zero + Copy + PartialOrd,
 {
     type Key = usize;
     type Value = V;
+
+    fn with_capacity(c: usize) -> BinaryIndexTree<V> {
+        BinaryIndexTree {
+            capacity: c,
+            data: vec![V::zero(); c],
+        }
+    }
 
     fn insert(&mut self, key: Self::Key, val: Self::Value) {
         assert!(key < self.capacity);
@@ -143,7 +135,7 @@ where
             if key == 0 {
                 break;
             }
-            key += (1 << key.trailing_zeros());
+            key += 1 << key.trailing_zeros();
         }
     }
 
@@ -164,7 +156,7 @@ where
         if key == 0 {
             return val;
         }
-        let mut parent = key & (key - 1);
+        let parent = key & (key - 1);
         key -= 1;
         while parent != key {
             val = val - self.data[key];
@@ -199,7 +191,9 @@ where
 
 #[cfg(test)]
 mod tests {
+    extern crate test;
     use super::*;
+    use self::test::Bencher;
 
     #[test]
     fn it_works() {
@@ -259,4 +253,55 @@ mod tests {
         assert_eq!(t.get_quantile(6), 2);
         assert_eq!(t.get_quantile(10), 3);
     }
+
+    fn load_updates(fname: &str) -> (usize, Vec<usize>, Vec<i32>) {
+        use std::fs::File;
+        use std::io::BufReader;
+        use std::io::prelude::*;
+
+        let fp = File::open(fname).expect("Could not open file");
+        let mut reader = BufReader::new(fp);
+        let mut line = String::new();
+
+        let _ = reader.read_line(&mut line);
+        let cap = line.trim().parse::<usize>().expect("Bad parse");
+        let mut keys = Vec::new();
+        let mut vals = Vec::new();
+
+        for line in reader.lines() {
+            let kv : Vec<i32> = line
+                .expect("Could not read line")
+                .split(" ")
+                .map(|x| x.trim().parse::<i32>()
+                     .expect("Bad parse"))
+                .collect();
+            keys.push(kv[0] as usize);
+            vals.push(kv[1]);
+        }
+
+        (cap, keys, vals)
+    }
+
+    fn benchmark_from_file<T>(fname: &str, b: &mut Bencher)
+        where T: CumlMap<Key=usize,Value=i32>,
+    {
+        let (cap, keys, vals) = load_updates(fname);
+        b.iter(|| {
+            let mut cm = T::with_capacity(cap);
+            for i in 1..keys.len() {
+                cm.insert(keys[i], vals[i]);
+            }
+        })
+    }
+
+    #[bench]
+    fn cft_bench_1_build(b: &mut Bencher) {
+        benchmark_from_file::<CumlFreqTable<i32>>("src/bench_1", b);
+    }
+
+    #[bench]
+    fn bix_bench_1_build(b: &mut Bencher) {
+        benchmark_from_file::<BinaryIndexTree<i32>>("src/bench_1", b);
+    }
 }
+
