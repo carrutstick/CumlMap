@@ -8,11 +8,11 @@ pub trait CumlMap {
     type Key;
     type Value;
 
-    fn with_capacity(Self::Key) -> Self;
+    fn with_capacity(usize) -> Self;
     fn insert(&mut self, Self::Key, Self::Value);
     fn get_cuml(&self, Self::Key) -> Self::Value;
     fn get_single(&self, Self::Key) -> Self::Value;
-    fn get_quantile(&self, Self::Value) -> Self::Key;
+    fn get_quantile(&self, Self::Value) -> Option<Self::Key>;
 }
 
 /*****************************************************************************
@@ -27,7 +27,7 @@ struct CumlFreqTable<V> {
 
 impl<V> CumlMap for CumlFreqTable<V>
 where
-    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + PartialOrd,
+    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
 {
     type Key = usize;
     type Value = V;
@@ -88,8 +88,8 @@ where
         }
     }
 
-    fn get_quantile(&self, quant: Self::Value) -> Self::Key {
-        assert!(quant <= self.total);
+    fn get_quantile(&self, quant: Self::Value) -> Option<Self::Key> {
+        if quant > self.total { return None }
         let mut index = 0;
         let mut acc = Self::Value::zero();
         for ref tbl in self.tables.iter() {
@@ -100,7 +100,7 @@ where
                 index = (index << 1) + 1
             }
         }
-        index
+        Some(index)
     }
 }
 
@@ -115,7 +115,7 @@ struct BinaryIndexTree<V> {
 
 impl<V> CumlMap for BinaryIndexTree<V>
 where
-    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + PartialOrd,
+    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
 {
     type Key = usize;
     type Value = V;
@@ -165,7 +165,7 @@ where
         val
     }
 
-    fn get_quantile(&self, quant: Self::Value) -> Self::Key {
+    fn get_quantile(&self, quant: Self::Value) -> Option<Self::Key> {
         let mut index = 0;
         let mut mask = self.capacity / 2;
         let mut quant = quant - self.data[0];
@@ -178,9 +178,158 @@ where
             mask >>= 1;
         }
         if quant > Self::Value::zero() {
-            index + 1
+            if index + 1 < self.capacity {
+                Some(index + 1)
+            } else {
+                None
+            }
         } else {
-            index
+            Some(index)
+        }
+    }
+}
+
+/*****************************************************************************
+ * Boxed cumulative frequency tree
+ *****************************************************************************/
+
+struct BoxedCumlNode<K,V> {
+    index: K,
+    val: V,
+    left: Option<Box<BoxedCumlNode<K,V>>>,
+    right: Option<Box<BoxedCumlNode<K,V>>>,
+}
+
+impl<K,V> BoxedCumlNode<K,V>
+where
+    K: Add<Output=K> + Sub<Output=K> + Zero + Copy + Ord,
+    V: Add<Output=V> + Sub<Output=V> + Zero + Copy + Ord,
+{
+    fn new(k: K, v: V) -> BoxedCumlNode<K, V>
+    {
+        BoxedCumlNode { index: k, val: v, left: None, right: None }
+    }
+
+    fn get_total(&self) -> V {
+        self.val + match self.right {
+            None => V::zero(),
+            Some(ref r) => r.get_total()
+        }
+    }
+
+    fn insert(&mut self, k: K, v: V) {
+        if k < self.index {
+            self.val = self.val + v;
+            match self.left {
+                None => self.left = Some(Box::new(Self::new(k, v))),
+                Some(ref mut l) => l.insert(k, v),
+            }
+        } else if k > self.index {
+            match self.right {
+                None => self.right = Some(Box::new(Self::new(k, v))),
+                Some(ref mut r) => r.insert(k, v),
+            }
+        } else {
+            self.val = self.val + v
+        }
+    }
+
+    fn get_cuml(&self, k: K, acc: V) -> V {
+        if k < self.index {
+            match self.left {
+                None => acc,
+                Some(ref l) => l.get_cuml(k, acc),
+            }
+        } else if k > self.index {
+            match self.right {
+                None => acc + self.val,
+                Some(ref r) => r.get_cuml(k, acc + self.val),
+            }
+        } else {
+            acc + self.val
+        }
+    }
+
+    fn get_single(&self, k: K) -> V {
+        if k < self.index {
+            match self.left {
+                None => V::zero(),
+                Some(ref l) => l.get_single(k),
+            }
+        } else if k > self.index {
+            match self.right {
+                None => V::zero(),
+                Some(ref r) => r.get_single(k),
+            }
+        } else {
+            match self.left {
+                None => self.val,
+                Some(ref l) => self.val - l.get_total(),
+            }
+        }
+    }
+
+    fn get_quantile(&self, v: V) -> Option<K> {
+        if v > self.val {
+            match self.right {
+                None => None,
+                Some(ref r) => r.get_quantile(v - self.val),
+            }
+        } else if v < self.val {
+            match self.left {
+                None => Some(self.index),
+                Some(ref l) => match l.get_quantile(v) {
+                    None => Some(self.index),
+                    s => s,
+                },
+            }
+        } else {
+            Some(self.index)
+        }
+    }
+}
+
+struct BoxedCumlTree<K,V> {
+    root: Option<BoxedCumlNode<K,V>>,
+}
+
+impl<K,V> CumlMap for BoxedCumlTree<K,V>
+where
+    K: Add<Output=K> + Sub<Output=K> + Zero + Copy + Ord,
+    V: Add<Output=V> + Sub<Output=V> + Zero + Copy + Ord,
+{
+    type Key = K;
+    type Value = V;
+
+    fn with_capacity(_k: usize) -> Self {
+        BoxedCumlTree { root: None }
+    }
+
+    fn insert(&mut self, k: Self::Key, v: Self::Value) {
+        match self.root {
+            Some(ref mut n) => n.insert(k, v),
+            None => self.root = Some(BoxedCumlNode::new(k, v)),
+        }
+    }
+
+    fn get_cuml(&self, k: Self::Key) -> Self::Value {
+        match self.root {
+            Some(ref n) => n.get_cuml(k, Self::Value::zero()),
+            None => Self::Value::zero(),
+        }
+    }
+
+    fn get_single(&self, k: Self::Key) -> Self::Value {
+        match self.root {
+            Some(ref n) => n.get_single(k),
+            None => Self::Value::zero(),
+        }
+    }
+
+    fn get_quantile(&self, quant: Self::Value) -> Option<Self::Key> {
+        match self.root {
+            Some(ref n) => n.get_quantile(quant),
+            None => None,
         }
     }
 }
@@ -200,9 +349,10 @@ mod tests {
         assert_eq!(2 + 2, 4);
     }
 
-    #[test]
-    fn trivial_cft() {
-        let mut t = CumlFreqTable::with_capacity(4);
+    fn test_trivial<T>()
+        where T: CumlMap<Key=usize,Value=i32>,
+    {
+        let mut t = T::with_capacity(4);
         t.insert(0, 1);
         t.insert(1, 2);
         t.insert(2, 3);
@@ -218,40 +368,28 @@ mod tests {
         assert_eq!(t.get_cuml(2), 6);
         assert_eq!(t.get_cuml(3), 11);
 
-        assert_eq!(t.get_quantile(0), 0);
-        assert_eq!(t.get_quantile(1), 0);
-        assert_eq!(t.get_quantile(2), 1);
-        assert_eq!(t.get_quantile(3), 1);
-        assert_eq!(t.get_quantile(4), 2);
-        assert_eq!(t.get_quantile(6), 2);
-        assert_eq!(t.get_quantile(10), 3);
+        assert_eq!(t.get_quantile(0), Some(0));
+        assert_eq!(t.get_quantile(1), Some(0));
+        assert_eq!(t.get_quantile(2), Some(1));
+        assert_eq!(t.get_quantile(3), Some(1));
+        assert_eq!(t.get_quantile(4), Some(2));
+        assert_eq!(t.get_quantile(6), Some(2));
+        assert_eq!(t.get_quantile(10), Some(3));
+    }
+
+    #[test]
+    fn trivial_cft() {
+        test_trivial::<CumlFreqTable<i32>>();
     }
 
     #[test]
     fn trivial_bix() {
-        let mut t = BinaryIndexTree::with_capacity(4);
-        t.insert(0, 1);
-        t.insert(1, 2);
-        t.insert(2, 3);
-        t.insert(3, 5);
+        test_trivial::<BinaryIndexTree<i32>>();
+    }
 
-        assert_eq!(t.get_single(0), 1);
-        assert_eq!(t.get_single(1), 2);
-        assert_eq!(t.get_single(2), 3);
-        assert_eq!(t.get_single(3), 5);
-
-        assert_eq!(t.get_cuml(0), 1);
-        assert_eq!(t.get_cuml(1), 3);
-        assert_eq!(t.get_cuml(2), 6);
-        assert_eq!(t.get_cuml(3), 11);
-
-        assert_eq!(t.get_quantile(0), 0);
-        assert_eq!(t.get_quantile(1), 0);
-        assert_eq!(t.get_quantile(2), 1);
-        assert_eq!(t.get_quantile(3), 1);
-        assert_eq!(t.get_quantile(4), 2);
-        assert_eq!(t.get_quantile(6), 2);
-        assert_eq!(t.get_quantile(10), 3);
+    #[test]
+    fn trivial_dct() {
+        test_trivial::<BoxedCumlTree<usize,i32>>();
     }
 
     fn load_updates(fname: &str) -> (usize, Vec<usize>, Vec<i32>) {
@@ -302,6 +440,11 @@ mod tests {
     #[bench]
     fn bix_bench_1_build(b: &mut Bencher) {
         benchmark_from_file::<BinaryIndexTree<i32>>("src/bench_1", b);
+    }
+
+    #[bench]
+    fn dct_bench_1_build(b: &mut Bencher) {
+        benchmark_from_file::<BoxedCumlTree<usize,i32>>("src/bench_1", b);
     }
 }
 
