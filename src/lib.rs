@@ -1,6 +1,8 @@
 #![feature(test)]
+#![feature(nll)]
 extern crate num_traits;
 
+// use std::cmp::Ordering;
 use num_traits::Zero;
 use std::ops::{Add, Sub};
 
@@ -290,7 +292,7 @@ where
 }
 
 struct BoxedCumlTree<K,V> {
-    root: Option<BoxedCumlNode<K,V>>,
+    root: Option<Box<BoxedCumlNode<K,V>>>,
 }
 
 impl<K,V> CumlMap for BoxedCumlTree<K,V>
@@ -306,9 +308,31 @@ where
     }
 
     fn insert(&mut self, k: Self::Key, v: Self::Value) {
+        /*
+        let mut pointer = &mut self.root;
+        while pointer.is_some() {
+            let cur = pointer.as_mut().unwrap();
+            let nxt = match k.cmp(&cur.index) {
+                Ordering::Less => {
+                    cur.val = cur.val + v;
+                    &mut cur.left
+                },
+                Ordering::Greater => &mut cur.right,
+                Ordering::Equal => {
+                    cur.val = cur.val + v;
+                    return
+                }
+            };
+            pointer = nxt;
+        }
+        *pointer = Some(Box::new(BoxedCumlNode::new(k,v)));
+        */
+
+        /*
+        */
         match self.root {
             Some(ref mut n) => n.insert(k, v),
-            None => self.root = Some(BoxedCumlNode::new(k, v)),
+            None => self.root = Some(Box::new(BoxedCumlNode::new(k, v))),
         }
     }
 
