@@ -2,7 +2,6 @@
 #![feature(nll)]
 extern crate num_traits;
 
-// use std::cmp::Ordering;
 use num_traits::Zero;
 use std::ops::{Add, Sub};
 
@@ -308,28 +307,6 @@ where
     }
 
     fn insert(&mut self, k: Self::Key, v: Self::Value) {
-        /*
-        let mut pointer = &mut self.root;
-        while pointer.is_some() {
-            let cur = pointer.as_mut().unwrap();
-            let nxt = match k.cmp(&cur.index) {
-                Ordering::Less => {
-                    cur.val = cur.val + v;
-                    &mut cur.left
-                },
-                Ordering::Greater => &mut cur.right,
-                Ordering::Equal => {
-                    cur.val = cur.val + v;
-                    return
-                }
-            };
-            pointer = nxt;
-        }
-        *pointer = Some(Box::new(BoxedCumlNode::new(k,v)));
-        */
-
-        /*
-        */
         match self.root {
             Some(ref mut n) => n.insert(k, v),
             None => self.root = Some(Box::new(BoxedCumlNode::new(k, v))),
@@ -357,6 +334,128 @@ where
         }
     }
 }
+
+/*****************************************************************************
+ * Tree structure with preallocated arena of nodes
+ *****************************************************************************/
+
+struct ArenaCumlNode<K,V> {
+    key: K,
+    val: V,
+    left: Option<usize>,
+    right: Option<usize>,
+}
+
+struct ArenaCumlTree<K,V> {
+    nodes: Vec<ArenaCumlNode<K,V>>,
+    root: Option<usize>,
+}
+
+impl<K,V> ArenaCumlTree<K,V>
+where
+    V: Add<Output=V> + Sub<Output=V> + Zero + Copy + Ord,
+{
+    fn get_total(&self, n: &Option<usize>) -> V {
+        let mut p = n;
+        let mut acc = V::zero();
+        while let Some(i) = *p {
+            let n = &self.nodes[i];
+            acc = acc + n.val;
+            p = &n.right;
+        }
+        acc
+    }
+}
+
+impl<K,V> CumlMap for ArenaCumlTree<K,V>
+where
+    K: Add<Output=K> + Sub<Output=K> + Zero + Copy + Ord,
+    V: Add<Output=V> + Sub<Output=V> + Zero + Copy + Ord,
+{
+    type Key = K;
+    type Value = V;
+
+    fn with_capacity(c: usize) -> Self {
+        ArenaCumlTree { nodes: Vec::with_capacity(c), root: None }
+    }
+
+    fn insert(&mut self, k: Self::Key, v: Self::Value) {
+        let l = self.nodes.len();
+        let mut p = &mut self.root;
+        while let Some(i) = *p {
+            let n = &mut self.nodes[i];
+            if k < n.key {
+                n.val = n.val + v;
+                p = &mut n.left;
+            } else if k > n.key {
+                p = &mut n.right;
+            } else {
+                n.val = n.val + v;
+                return;
+            }
+        }
+        *p = Some(l);
+        self.nodes.push(ArenaCumlNode { key: k, val: v, left: None, right: None });
+    }
+
+    fn get_cuml(&self, k: Self::Key) -> Self::Value {
+        let mut acc = Self::Value::zero();
+        let mut p = &self.root;
+        while let Some(i) = *p {
+            let n = &self.nodes[i];
+            if k < n.key {
+                p = &n.left;
+            } else if k > n.key {
+                acc = acc + n.val;
+                p = &n.right;
+            } else {
+                return acc + n.val;
+            }
+        }
+        acc
+    }
+
+    fn get_single(&self, k: Self::Key) -> Self::Value {
+        let mut p = &self.root;
+        while let Some(i) = *p {
+            let n = &self.nodes[i];
+            if k < n.key {
+                p = &n.left;
+            } else if k > n.key {
+                p = &n.right;
+            } else {
+                return n.val - self.get_total(&n.left)
+            }
+        }
+        Self::Value::zero()
+    }
+
+    fn get_quantile(&self, quant: Self::Value) -> Option<Self::Key> {
+        let mut p = &self.root;
+        let mut lastabove = None;
+        let mut last = None;
+        let mut q = quant;
+        while let Some(i) = *p {
+            let n = &self.nodes[i];
+            if q < n.val {
+                lastabove = Some(n.key);
+                p = &n.left
+            } else if q > n.val {
+                last = Some(n.key);
+                q = q - n.val;
+                p = &n.right
+            } else {
+                return Some(n.key)
+            }
+        }
+        if q > Self::Value::zero() {
+            lastabove
+        } else {
+            last
+        }
+    }
+}
+
 
 /*****************************************************************************
  * Tests, etc.
@@ -392,7 +491,6 @@ mod tests {
         assert_eq!(t.get_cuml(2), 6);
         assert_eq!(t.get_cuml(3), 11);
 
-        assert_eq!(t.get_quantile(0), Some(0));
         assert_eq!(t.get_quantile(1), Some(0));
         assert_eq!(t.get_quantile(2), Some(1));
         assert_eq!(t.get_quantile(3), Some(1));
@@ -414,6 +512,11 @@ mod tests {
     #[test]
     fn trivial_dct() {
         test_trivial::<BoxedCumlTree<usize,i32>>();
+    }
+
+    #[test]
+    fn trivial_act() {
+        test_trivial::<ArenaCumlTree<usize,i32>>();
     }
 
     fn load_updates(fname: &str) -> (usize, Vec<usize>, Vec<i32>) {
@@ -469,6 +572,11 @@ mod tests {
     #[bench]
     fn dct_bench_1_build(b: &mut Bencher) {
         benchmark_from_file::<BoxedCumlTree<usize,i32>>("src/bench_1", b);
+    }
+
+    #[bench]
+    fn act_bench_1_build(b: &mut Bencher) {
+        benchmark_from_file::<ArenaCumlTree<usize,i32>>("src/bench_1", b);
     }
 }
 
