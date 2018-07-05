@@ -2,33 +2,37 @@ extern crate num_traits;
 use num_traits::Zero;
 use std::ops::{Add, Sub};
 
-use ::cmap::*;
+use cmap::*;
 
 /*****************************************************************************
  * Boxed cumulative frequency tree
  *****************************************************************************/
 
-struct BoxedCumlNode<K,V> {
+struct BoxedCumlNode<K, V> {
     index: K,
     val: V,
-    left: Option<Box<BoxedCumlNode<K,V>>>,
-    right: Option<Box<BoxedCumlNode<K,V>>>,
+    left: Option<Box<BoxedCumlNode<K, V>>>,
+    right: Option<Box<BoxedCumlNode<K, V>>>,
 }
 
-impl<K,V> BoxedCumlNode<K,V>
+impl<K, V> BoxedCumlNode<K, V>
 where
-    K: Add<Output=K> + Sub<Output=K> + Zero + Copy + Ord,
-    V: Add<Output=V> + Sub<Output=V> + Zero + Copy + Ord,
+    K: Add<Output = K> + Sub<Output = K> + Zero + Copy + Ord,
+    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
 {
-    fn new(k: K, v: V) -> BoxedCumlNode<K, V>
-    {
-        BoxedCumlNode { index: k, val: v, left: None, right: None }
+    fn new(k: K, v: V) -> BoxedCumlNode<K, V> {
+        BoxedCumlNode {
+            index: k,
+            val: v,
+            left: None,
+            right: None,
+        }
     }
 
     fn get_total(&self) -> V {
         self.val + match self.right {
             None => V::zero(),
-            Some(ref r) => r.get_total()
+            Some(ref r) => r.get_total(),
         }
     }
 
@@ -104,14 +108,14 @@ where
     }
 }
 
-pub struct BoxedCumlTree<K,V> {
-    root: Option<Box<BoxedCumlNode<K,V>>>,
+pub struct BoxedCumlTree<K, V> {
+    root: Option<Box<BoxedCumlNode<K, V>>>,
 }
 
-impl<K,V> CumlMap for BoxedCumlTree<K,V>
+impl<K, V> CumlMap for BoxedCumlTree<K, V>
 where
-    K: Add<Output=K> + Sub<Output=K> + Zero + Copy + Ord,
-    V: Add<Output=V> + Sub<Output=V> + Zero + Copy + Ord,
+    K: Add<Output = K> + Sub<Output = K> + Zero + Copy + Ord,
+    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
 {
     type Key = K;
     type Value = V;
@@ -148,4 +152,3 @@ where
         }
     }
 }
-

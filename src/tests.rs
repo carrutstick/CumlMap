@@ -1,8 +1,7 @@
 #[cfg(test)]
-
 extern crate test;
-use super::*;
 use self::test::Bencher;
+use super::*;
 
 /*****************************************************************************
  * Tests, etc.
@@ -14,7 +13,8 @@ fn it_works() {
 }
 
 fn test_trivial<T>()
-    where T: CumlMap<Key=usize,Value=i32>,
+where
+    T: CumlMap<Key = usize, Value = i32>,
 {
     let mut t = T::with_capacity(4);
     t.insert(0, 1);
@@ -52,18 +52,18 @@ fn trivial_bix() {
 
 #[test]
 fn trivial_dct() {
-    test_trivial::<BoxedCumlTree<usize,i32>>();
+    test_trivial::<BoxedCumlTree<usize, i32>>();
 }
 
 #[test]
 fn trivial_act() {
-    test_trivial::<ArenaCumlTree<usize,i32>>();
+    test_trivial::<ArenaCumlTree<usize, i32>>();
 }
 
 fn load_updates(fname: &str) -> (usize, Vec<usize>, Vec<i32>) {
     use std::fs::File;
-    use std::io::BufReader;
     use std::io::prelude::*;
+    use std::io::BufReader;
 
     let fp = File::open(fname).expect("Could not open file");
     let mut reader = BufReader::new(fp);
@@ -75,11 +75,10 @@ fn load_updates(fname: &str) -> (usize, Vec<usize>, Vec<i32>) {
     let mut vals = Vec::new();
 
     for line in reader.lines() {
-        let kv : Vec<i32> = line
+        let kv: Vec<i32> = line
             .expect("Could not read line")
             .split(" ")
-            .map(|x| x.trim().parse::<i32>()
-                 .expect("Bad parse"))
+            .map(|x| x.trim().parse::<i32>().expect("Bad parse"))
             .collect();
         keys.push(kv[0] as usize);
         vals.push(kv[1]);
@@ -89,7 +88,8 @@ fn load_updates(fname: &str) -> (usize, Vec<usize>, Vec<i32>) {
 }
 
 fn benchmark_from_file<T>(fname: &str, b: &mut Bencher)
-    where T: CumlMap<Key=usize,Value=i32>,
+where
+    T: CumlMap<Key = usize, Value = i32>,
 {
     let (cap, keys, vals) = load_updates(fname);
     b.iter(|| {
@@ -112,16 +112,17 @@ fn bix_bench_1_build(b: &mut Bencher) {
 
 #[bench]
 fn dct_bench_1_build(b: &mut Bencher) {
-    benchmark_from_file::<BoxedCumlTree<usize,i32>>("src/bench_1", b);
+    benchmark_from_file::<BoxedCumlTree<usize, i32>>("src/bench_1", b);
 }
 
 #[bench]
 fn act_bench_1_build(b: &mut Bencher) {
-    benchmark_from_file::<ArenaCumlTree<usize,i32>>("src/bench_1", b);
+    benchmark_from_file::<ArenaCumlTree<usize, i32>>("src/bench_1", b);
 }
 
 fn benchmark_degen<T>(b: &mut Bencher)
-    where T: CumlMap<Key=usize,Value=i32>
+where
+    T: CumlMap<Key = usize, Value = i32>,
 {
     b.iter(|| {
         let mut cm = T::with_capacity(500);
@@ -143,10 +144,10 @@ fn bix_bench_degen_build(b: &mut Bencher) {
 
 #[bench]
 fn dct_bench_degen_build(b: &mut Bencher) {
-    benchmark_degen::<BoxedCumlTree<usize,i32>>(b);
+    benchmark_degen::<BoxedCumlTree<usize, i32>>(b);
 }
 
 #[bench]
 fn act_bench_degen_build(b: &mut Bencher) {
-    benchmark_degen::<ArenaCumlTree<usize,i32>>(b);
+    benchmark_degen::<ArenaCumlTree<usize, i32>>(b);
 }

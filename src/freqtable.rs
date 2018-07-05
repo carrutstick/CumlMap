@@ -1,7 +1,7 @@
 use super::num_traits::Zero;
 use std::ops::{Add, Sub};
 
-use ::cmap::*;
+use cmap::*;
 
 /*****************************************************************************
  * Cumulative Frequency Table, per Simon Tatham
@@ -77,7 +77,9 @@ where
     }
 
     fn get_quantile(&self, quant: Self::Value) -> Option<Self::Key> {
-        if quant > self.total { return None }
+        if quant > self.total {
+            return None;
+        }
         let mut index = 0;
         let mut acc = Self::Value::zero();
         for ref tbl in self.tables.iter() {

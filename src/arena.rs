@@ -4,27 +4,27 @@ use std::ops::{Add, Sub};
 
 use std::num::NonZeroUsize;
 
-use ::cmap::*;
+use cmap::*;
 
 /*****************************************************************************
  * Tree structure with preallocated arena of nodes
  *****************************************************************************/
 
-struct ArenaCumlNode<K,V> {
+struct ArenaCumlNode<K, V> {
     key: K,
     val: V,
     left: Option<NonZeroUsize>,
     right: Option<NonZeroUsize>,
 }
 
-pub struct ArenaCumlTree<K,V> {
-    nodes: Vec<ArenaCumlNode<K,V>>,
+pub struct ArenaCumlTree<K, V> {
+    nodes: Vec<ArenaCumlNode<K, V>>,
     root: Option<NonZeroUsize>,
 }
 
-impl<K,V> ArenaCumlTree<K,V>
+impl<K, V> ArenaCumlTree<K, V>
 where
-    V: Add<Output=V> + Sub<Output=V> + Zero + Copy + Ord,
+    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
 {
     fn get_total(&self, n: &Option<NonZeroUsize>) -> V {
         let mut p = n;
@@ -38,18 +38,26 @@ where
     }
 }
 
-impl<K,V> CumlMap for ArenaCumlTree<K,V>
+impl<K, V> CumlMap for ArenaCumlTree<K, V>
 where
-    K: Add<Output=K> + Sub<Output=K> + Zero + Copy + Ord,
-    V: Add<Output=V> + Sub<Output=V> + Zero + Copy + Ord,
+    K: Add<Output = K> + Sub<Output = K> + Zero + Copy + Ord,
+    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
 {
     type Key = K;
     type Value = V;
 
     fn with_capacity(c: usize) -> Self {
         let mut nodes = Vec::with_capacity(c);
-        nodes.push(ArenaCumlNode { key: K::zero(), val: V::zero(), left: None, right: None});
-        ArenaCumlTree { nodes: nodes, root: None }
+        nodes.push(ArenaCumlNode {
+            key: K::zero(),
+            val: V::zero(),
+            left: None,
+            right: None,
+        });
+        ArenaCumlTree {
+            nodes: nodes,
+            root: None,
+        }
     }
 
     fn insert(&mut self, k: Self::Key, v: Self::Value) {
@@ -68,7 +76,12 @@ where
             }
         }
         *p = NonZeroUsize::new(l);
-        self.nodes.push(ArenaCumlNode { key: k, val: v, left: None, right: None });
+        self.nodes.push(ArenaCumlNode {
+            key: k,
+            val: v,
+            left: None,
+            right: None,
+        });
     }
 
     fn get_cuml(&self, k: Self::Key) -> Self::Value {
@@ -97,7 +110,7 @@ where
             } else if k > n.key {
                 p = &n.right;
             } else {
-                return n.val - self.get_total(&n.left)
+                return n.val - self.get_total(&n.left);
             }
         }
         Self::Value::zero()
@@ -118,7 +131,7 @@ where
                 q = q - n.val;
                 p = &n.right
             } else {
-                return Some(n.key)
+                return Some(n.key);
             }
         }
         if q > Self::Value::zero() {
@@ -128,4 +141,3 @@ where
         }
     }
 }
-

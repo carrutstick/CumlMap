@@ -2,7 +2,7 @@ extern crate num_traits;
 use num_traits::Zero;
 use std::ops::{Add, Sub};
 
-use ::cmap::*;
+use cmap::*;
 
 /*****************************************************************************
  * Binary Index Tree, per Peter Fenwick
@@ -88,4 +88,3 @@ where
         }
     }
 }
-
