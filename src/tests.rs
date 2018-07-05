@@ -120,3 +120,33 @@ fn act_bench_1_build(b: &mut Bencher) {
     benchmark_from_file::<ArenaCumlTree<usize,i32>>("src/bench_1", b);
 }
 
+fn benchmark_degen<T>(b: &mut Bencher)
+    where T: CumlMap<Key=usize,Value=i32>
+{
+    b.iter(|| {
+        let mut cm = T::with_capacity(500);
+        for i in 1..500 {
+            cm.insert(i, i as i32);
+        }
+    });
+}
+
+#[bench]
+fn cft_bench_degen_build(b: &mut Bencher) {
+    benchmark_degen::<CumlFreqTable<i32>>(b);
+}
+
+#[bench]
+fn bix_bench_degen_build(b: &mut Bencher) {
+    benchmark_degen::<BinaryIndexTree<i32>>(b);
+}
+
+#[bench]
+fn dct_bench_degen_build(b: &mut Bencher) {
+    benchmark_degen::<BoxedCumlTree<usize,i32>>(b);
+}
+
+#[bench]
+fn act_bench_degen_build(b: &mut Bencher) {
+    benchmark_degen::<ArenaCumlTree<usize,i32>>(b);
+}

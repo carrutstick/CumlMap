@@ -17,3 +17,5 @@ pub use bix::*;
 
 mod boxed;
 pub use boxed::*;
+
+mod tests;
