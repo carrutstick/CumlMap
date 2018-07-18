@@ -1,4 +1,3 @@
-#[cfg(test)]
 extern crate test;
 use self::test::Bencher;
 use super::*;
@@ -60,6 +59,11 @@ fn trivial_act() {
     test_trivial::<ArenaCumlTree<usize, i32>>();
 }
 
+#[test]
+fn trivial_aat() {
+    test_trivial::<ArneCumlTree<usize, i32>>();
+}
+
 fn load_updates(fname: &str) -> (usize, Vec<usize>, Vec<i32>) {
     use std::fs::File;
     use std::io::prelude::*;
@@ -94,10 +98,21 @@ where
     let (cap, keys, vals) = load_updates(fname);
     b.iter(|| {
         let mut cm = T::with_capacity(cap);
-        for i in 1..keys.len() {
+        for i in 0..keys.len() {
             cm.insert(keys[i], vals[i]);
         }
-    })
+    });
+
+    let mut cm = T::with_capacity(cap);
+    let mut c50 = 0;
+    let mut c1 = 0;
+    for i in 0..keys.len() {
+        cm.insert(keys[i], vals[i]);
+        if keys[i] <= 50 { c50 += vals[i] }
+        if keys[i] <= 1 { c1 += vals[i] }
+    }
+    assert_eq!(cm.get_cuml(50), c50);
+    assert_eq!(cm.get_cuml(1), c1);
 }
 
 #[bench]
@@ -120,6 +135,11 @@ fn act_bench_1_build(b: &mut Bencher) {
     benchmark_from_file::<ArenaCumlTree<usize, i32>>("src/bench_1", b);
 }
 
+#[bench]
+fn aat_bench_1_build(b: &mut Bencher) {
+    benchmark_from_file::<ArneCumlTree<usize, i32>>("src/bench_1", b);
+}
+
 fn benchmark_degen<T>(b: &mut Bencher)
 where
     T: CumlMap<Key = usize, Value = i32>,
@@ -130,6 +150,15 @@ where
             cm.insert(i, i as i32);
         }
     });
+
+    let mut cm = T::with_capacity(500);
+    let mut tot = 0;
+    for i in 1..500 {
+        cm.insert(i, i as i32);
+        tot += i;
+        assert_eq!(cm.get_cuml(i), tot as i32);
+        assert_eq!(cm.get_single(i), i as i32);
+    }
 }
 
 #[bench]
@@ -150,4 +179,9 @@ fn dct_bench_degen_build(b: &mut Bencher) {
 #[bench]
 fn act_bench_degen_build(b: &mut Bencher) {
     benchmark_degen::<ArenaCumlTree<usize, i32>>(b);
+}
+
+#[bench]
+fn aat_bench_degen_build(b: &mut Bencher) {
+    benchmark_degen::<ArneCumlTree<usize, i32>>(b);
 }

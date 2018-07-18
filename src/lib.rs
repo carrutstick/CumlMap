@@ -18,4 +18,7 @@ pub use bix::*;
 mod boxed;
 pub use boxed::*;
 
+mod arne;
+pub use arne::*;
+
 mod tests;
