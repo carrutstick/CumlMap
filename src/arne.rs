@@ -2,84 +2,178 @@ extern crate num_traits;
 use num_traits::Zero;
 use std::ops::{Add, Sub};
 
-use std::num::NonZeroUsize;
-
 use cmap::*;
 
 /*****************************************************************************
- * Tree structure with preallocated arena of nodes
+ * Boxed cumulative frequency tree
  *****************************************************************************/
 
-struct ArneCumlNode<K, V> {
-    key: K,
+struct AACumlNode<K, V> {
+    index: K,
     val: V,
-    left: Option<NonZeroUsize>,
-    right: Option<NonZeroUsize>,
+    left: Option<Box<AACumlNode<K, V>>>,
+    right: Option<Box<AACumlNode<K, V>>>,
     level: usize,
 }
 
-pub struct ArneCumlTree<K, V> {
-    nodes: Vec<ArneCumlNode<K, V>>,
-    root: Option<NonZeroUsize>,
-}
-
-impl<K, V> ArneCumlTree<K, V>
+fn insert_node<K, V>(n: Option<Box<AACumlNode<K, V>>>, k: K, v: V) -> Option<Box<AACumlNode<K, V>>>
 where
+    K: Add<Output = K> + Sub<Output = K> + Zero + Copy + Ord,
     V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
 {
-    fn get_total(&self, n: &Option<NonZeroUsize>) -> V {
-        let mut p = n;
-        let mut acc = V::zero();
-        while let Some(i) = *p {
-            let n = &self.nodes[i.get()];
-            acc = acc + n.val;
-            p = &n.right;
-        }
-        acc
+    match n {
+        None => Some(Box::new(AACumlNode::new(k, v))),
+        Some(mut nn) => {
+            if k < nn.index {
+                nn.val = nn.val + v;
+                nn.left = insert_node(nn.left, k, v)
+            } else if k > nn.index {
+                nn.right = insert_node(nn.right, k, v)
+            } else {
+                nn.val = nn.val + v;
+                return Some(nn)
+            }
+            split_node(skew_node(Some(nn)))
+        },
     }
+}
 
-    fn skew(&mut self, n: Option<NonZeroUsize>) -> Option<NonZeroUsize> {
-        match n {
-            None => None,
-            Some(k) => match self.nodes[k.get()].left {
-                None => Some(k),
-                Some(l) => if self.nodes[l.get()].level == self.nodes[k.get()].level {
-                    self.nodes[k.get()].left = self.nodes[l.get()].right;
-                    self.nodes[k.get()].val =
-                        self.nodes[k.get()].val - self.nodes[l.get()].val;
-                    self.nodes[l.get()].right = Some(k);
-                    Some(l)
+fn skew_node<K, V>(n: Option<Box<AACumlNode<K, V>>>) -> Option<Box<AACumlNode<K, V>>>
+where
+    K: Add<Output = K> + Sub<Output = K> + Zero + Copy + Ord,
+    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
+{
+    match n {
+        None => None,
+        Some(mut nn) => if nn.left.is_none() {
+            Some(nn)
+        } else {
+            let mut l = nn.left.take().unwrap();
+            if l.level == nn.level {
+                nn.left = l.right.take();
+                nn.val = nn.val - l.val;
+                l.right = Some(nn);
+                Some(l)
+            } else {
+                nn.left = Some(l);
+                Some(nn)
+            }
+        },
+    }
+}
+
+fn split_node<K, V>(n: Option<Box<AACumlNode<K, V>>>) -> Option<Box<AACumlNode<K, V>>>
+where
+    K: Add<Output = K> + Sub<Output = K> + Zero + Copy + Ord,
+    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
+{
+    match n {
+        None => None,
+        Some(mut nn) => if nn.right.is_none() {
+            Some(nn)
+        } else {
+            let mut r = nn.right.take().unwrap();
+            if r.right.is_none() {
+                nn.right = Some(r);
+                Some(nn)
+            } else {
+                if r.right.as_ref().unwrap().level == nn.level {
+                    nn.right = r.left.take();
+                    r.val = r.val + nn.val;
+                    r.left = Some(nn);
+                    r.level += 1;
+                    Some(r)
                 } else {
-                    Some(k)
-                },
-            },
+                    nn.right = Some(r);
+                    Some(nn)
+                }
+            }
+        },
+    }
+}
+
+impl<K, V> AACumlNode<K, V>
+where
+    K: Add<Output = K> + Sub<Output = K> + Zero + Copy + Ord,
+    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
+{
+    fn new(k: K, v: V) -> AACumlNode<K, V> {
+        AACumlNode {
+            index: k,
+            val: v,
+            left: None,
+            right: None,
+            level: 1,
         }
     }
 
-    fn split(&mut self, n: Option<NonZeroUsize>) -> Option<NonZeroUsize> {
-        match n {
-            None => None,
-            Some(k) => match self.nodes[k.get()].right {
-                None => Some(k),
-                Some(r) => match self.nodes[r.get()].right {
-                    None => Some(k),
-                    Some(rr) => if self.nodes[k.get()].level == self.nodes[rr.get()].level {
-                        self.nodes[k.get()].right = self.nodes[r.get()].left;
-                        self.nodes[r.get()].val =
-                            self.nodes[r.get()].val + self.nodes[k.get()].val;
-                        self.nodes[r.get()].left = Some(k);
-                        self.nodes[r.get()].level += 1;
-                        Some(r)
-                    } else {
-                        Some(k)
-                    },
+    fn get_total(&self) -> V {
+        self.val + match self.right {
+            None => V::zero(),
+            Some(ref r) => r.get_total(),
+        }
+    }
+
+    fn get_cuml(&self, k: K, acc: V) -> V {
+        if k < self.index {
+            match self.left {
+                None => acc,
+                Some(ref l) => l.get_cuml(k, acc),
+            }
+        } else if k > self.index {
+            match self.right {
+                None => acc + self.val,
+                Some(ref r) => r.get_cuml(k, acc + self.val),
+            }
+        } else {
+            acc + self.val
+        }
+    }
+
+    fn get_single(&self, k: K) -> V {
+        if k < self.index {
+            match self.left {
+                None => V::zero(),
+                Some(ref l) => l.get_single(k),
+            }
+        } else if k > self.index {
+            match self.right {
+                None => V::zero(),
+                Some(ref r) => r.get_single(k),
+            }
+        } else {
+            match self.left {
+                None => self.val,
+                Some(ref l) => self.val - l.get_total(),
+            }
+        }
+    }
+
+    fn get_quantile(&self, v: V) -> Option<K> {
+        if v > self.val {
+            match self.right {
+                None => None,
+                Some(ref r) => r.get_quantile(v - self.val),
+            }
+        } else if v < self.val {
+            match self.left {
+                None => Some(self.index),
+                Some(ref l) => match l.get_quantile(v) {
+                    None => Some(self.index),
+                    s => s,
                 },
-            },
+            }
+        } else {
+            Some(self.index)
         }
     }
 }
 
-impl<K, V> CumlMap for ArneCumlTree<K, V>
+pub struct AACumlTree<K, V> {
+    root: Option<Box<AACumlNode<K, V>>>,
+}
+
+impl<K, V> CumlMap for AACumlTree<K, V>
 where
     K: Add<Output = K> + Sub<Output = K> + Zero + Copy + Ord,
     V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
@@ -87,119 +181,32 @@ where
     type Key = K;
     type Value = V;
 
-    fn with_capacity(c: usize) -> Self {
-        let mut nodes = Vec::with_capacity(c);
-        nodes.push(ArneCumlNode {
-            key: K::zero(),
-            val: V::zero(),
-            left: None,
-            right: None,
-            level: 1,
-        });
-        ArneCumlTree {
-            nodes: nodes,
-            root: None,
-        }
-
+    fn with_capacity(_k: usize) -> Self {
+        AACumlTree { root: None }
     }
 
     fn insert(&mut self, k: Self::Key, v: Self::Value) {
-        let l = self.nodes.len();
-        let mut p = &mut self.root;
-        let mut stack = Vec::new();
-        let mut isleft = Vec::new();
-        while let Some(i) = *p {
-            let n = &mut self.nodes[i.get()];
-            stack.push(i.get());
-            if k < n.key {
-                n.val = n.val + v;
-                p = &mut n.left;
-                isleft.push(true);
-            } else if k > n.key {
-                p = &mut n.right;
-                isleft.push(false);
-            } else {
-                n.val = n.val + v;
-                return;
-            }
-        }
-        self.nodes.push(ArneCumlNode {
-            key: k,
-            val: v,
-            left: None,
-            right: None,
-            level: 1,
-        });
-
-        let mut ret = NonZeroUsize::new(l);
-        while !stack.is_empty() {
-            let cur = stack.pop().unwrap();
-            let isl = isleft.pop().unwrap();
-            if isl {
-                self.nodes[cur].left = ret;
-            } else {
-                self.nodes[cur].right = ret;
-            }
-            ret = self.skew(NonZeroUsize::new(cur));
-            ret = self.split(ret);
-        }
-        self.root = ret;
+        self.root = insert_node(self.root.take(), k, v);
     }
 
     fn get_cuml(&self, k: Self::Key) -> Self::Value {
-        let mut acc = Self::Value::zero();
-        let mut p = &self.root;
-        while let Some(i) = *p {
-            let n = &self.nodes[i.get()];
-            if k < n.key {
-                p = &n.left;
-            } else if k > n.key {
-                acc = acc + n.val;
-                p = &n.right;
-            } else {
-                return acc + n.val;
-            }
+        match self.root {
+            Some(ref n) => n.get_cuml(k, Self::Value::zero()),
+            None => Self::Value::zero(),
         }
-        acc
     }
 
     fn get_single(&self, k: Self::Key) -> Self::Value {
-        let mut p = &self.root;
-        while let Some(i) = *p {
-            let n = &self.nodes[i.get()];
-            if k < n.key {
-                p = &n.left;
-            } else if k > n.key {
-                p = &n.right;
-            } else {
-                return n.val - self.get_total(&n.left);
-            }
+        match self.root {
+            Some(ref n) => n.get_single(k),
+            None => Self::Value::zero(),
         }
-        Self::Value::zero()
     }
 
     fn get_quantile(&self, quant: Self::Value) -> Option<Self::Key> {
-        let mut p = &self.root;
-        let mut lastabove = None;
-        let mut last = None;
-        let mut q = quant;
-        while let Some(i) = *p {
-            let n = &self.nodes[i.get()];
-            if q < n.val {
-                lastabove = Some(n.key);
-                p = &n.left
-            } else if q > n.val {
-                last = Some(n.key);
-                q = q - n.val;
-                p = &n.right
-            } else {
-                return Some(n.key);
-            }
-        }
-        if q > Self::Value::zero() {
-            lastabove
-        } else {
-            last
+        match self.root {
+            Some(ref n) => n.get_quantile(quant),
+            None => None,
         }
     }
 }

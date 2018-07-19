@@ -61,7 +61,7 @@ fn trivial_act() {
 
 #[test]
 fn trivial_aat() {
-    test_trivial::<ArneCumlTree<usize, i32>>();
+    test_trivial::<AACumlTree<usize, i32>>();
 }
 
 fn load_updates(fname: &str) -> (usize, Vec<usize>, Vec<i32>) {
@@ -137,23 +137,24 @@ fn act_bench_1_build(b: &mut Bencher) {
 
 #[bench]
 fn aat_bench_1_build(b: &mut Bencher) {
-    benchmark_from_file::<ArneCumlTree<usize, i32>>("src/bench_1", b);
+    benchmark_from_file::<AACumlTree<usize, i32>>("src/bench_1", b);
 }
 
 fn benchmark_degen<T>(b: &mut Bencher)
 where
     T: CumlMap<Key = usize, Value = i32>,
 {
+    let n = 1000;
     b.iter(|| {
-        let mut cm = T::with_capacity(500);
-        for i in 1..500 {
+        let mut cm = T::with_capacity(n);
+        for i in 1..n {
             cm.insert(i, i as i32);
         }
     });
 
-    let mut cm = T::with_capacity(500);
+    let mut cm = T::with_capacity(n);
     let mut tot = 0;
-    for i in 1..500 {
+    for i in 1..n {
         cm.insert(i, i as i32);
         tot += i;
         assert_eq!(cm.get_cuml(i), tot as i32);
@@ -183,5 +184,5 @@ fn act_bench_degen_build(b: &mut Bencher) {
 
 #[bench]
 fn aat_bench_degen_build(b: &mut Bencher) {
-    benchmark_degen::<ArneCumlTree<usize, i32>>(b);
+    benchmark_degen::<AACumlTree<usize, i32>>(b);
 }
