@@ -31,10 +31,10 @@ where
                 nn.right = insert_node(nn.right, k, v)
             } else {
                 nn.val = nn.val + v;
-                return Some(nn)
+                return Some(nn);
             }
             split_node(skew_node(Some(nn)))
-        },
+        }
     }
 }
 

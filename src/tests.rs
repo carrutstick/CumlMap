@@ -108,8 +108,12 @@ where
     let mut c1 = 0;
     for i in 0..keys.len() {
         cm.insert(keys[i], vals[i]);
-        if keys[i] <= 50 { c50 += vals[i] }
-        if keys[i] <= 1 { c1 += vals[i] }
+        if keys[i] <= 50 {
+            c50 += vals[i]
+        }
+        if keys[i] <= 1 {
+            c1 += vals[i]
+        }
     }
     assert_eq!(cm.get_cuml(50), c50);
     assert_eq!(cm.get_cuml(1), c1);
