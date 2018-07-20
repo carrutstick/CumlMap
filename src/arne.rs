@@ -8,88 +8,14 @@ use cmap::*;
  * Boxed cumulative frequency tree
  *****************************************************************************/
 
+type Node<K, V> = Option<Box<AACumlNode<K, V>>>;
+
 struct AACumlNode<K, V> {
     index: K,
     val: V,
-    left: Option<Box<AACumlNode<K, V>>>,
-    right: Option<Box<AACumlNode<K, V>>>,
+    left: Node<K, V>,
+    right: Node<K, V>,
     level: usize,
-}
-
-fn insert_node<K, V>(n: Option<Box<AACumlNode<K, V>>>, k: K, v: V) -> Option<Box<AACumlNode<K, V>>>
-where
-    K: Add<Output = K> + Sub<Output = K> + Zero + Copy + Ord,
-    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
-{
-    match n {
-        None => Some(Box::new(AACumlNode::new(k, v))),
-        Some(mut nn) => {
-            if k < nn.index {
-                nn.val = nn.val + v;
-                nn.left = insert_node(nn.left, k, v)
-            } else if k > nn.index {
-                nn.right = insert_node(nn.right, k, v)
-            } else {
-                nn.val = nn.val + v;
-                return Some(nn);
-            }
-            split_node(skew_node(Some(nn)))
-        }
-    }
-}
-
-fn skew_node<K, V>(n: Option<Box<AACumlNode<K, V>>>) -> Option<Box<AACumlNode<K, V>>>
-where
-    K: Add<Output = K> + Sub<Output = K> + Zero + Copy + Ord,
-    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
-{
-    match n {
-        None => None,
-        Some(mut nn) => if nn.left.is_none() {
-            Some(nn)
-        } else {
-            let mut l = nn.left.take().unwrap();
-            if l.level == nn.level {
-                nn.left = l.right.take();
-                nn.val = nn.val - l.val;
-                l.right = Some(nn);
-                Some(l)
-            } else {
-                nn.left = Some(l);
-                Some(nn)
-            }
-        },
-    }
-}
-
-fn split_node<K, V>(n: Option<Box<AACumlNode<K, V>>>) -> Option<Box<AACumlNode<K, V>>>
-where
-    K: Add<Output = K> + Sub<Output = K> + Zero + Copy + Ord,
-    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
-{
-    match n {
-        None => None,
-        Some(mut nn) => if nn.right.is_none() {
-            Some(nn)
-        } else {
-            let mut r = nn.right.take().unwrap();
-            if r.right.is_none() {
-                nn.right = Some(r);
-                Some(nn)
-            } else {
-                if r.right.as_ref().unwrap().level == nn.level {
-                    nn.right = r.left.take();
-                    r.val = r.val + nn.val;
-                    r.left = Some(nn);
-                    r.level += 1;
-                    Some(r)
-                } else {
-                    nn.right = Some(r);
-                    Some(nn)
-                }
-            }
-        },
-    }
 }
 
 impl<K, V> AACumlNode<K, V>
@@ -104,6 +30,70 @@ where
             left: None,
             right: None,
             level: 1,
+        }
+    }
+
+    fn insert_node(n: Node<K, V>, k: K, v: V) -> Node<K, V> {
+        match n {
+            None => Some(Box::new(AACumlNode::new(k, v))),
+            Some(mut nn) => {
+                if k < nn.index {
+                    nn.val = nn.val + v;
+                    nn.left = AACumlNode::insert_node(nn.left, k, v)
+                } else if k > nn.index {
+                    nn.right = AACumlNode::insert_node(nn.right, k, v)
+                } else {
+                    nn.val = nn.val + v;
+                    return Some(nn);
+                }
+                AACumlNode::split_node(AACumlNode::skew_node(Some(nn)))
+            }
+        }
+    }
+
+    fn skew_node(n: Node<K, V>) -> Node<K, V> {
+        match n {
+            None => None,
+            Some(mut nn) => if nn.left.is_none() {
+                Some(nn)
+            } else {
+                let mut l = nn.left.take().unwrap();
+                if l.level == nn.level {
+                    nn.left = l.right.take();
+                    nn.val = nn.val - l.val;
+                    l.right = Some(nn);
+                    Some(l)
+                } else {
+                    nn.left = Some(l);
+                    Some(nn)
+                }
+            },
+        }
+    }
+
+    fn split_node(n: Node<K, V>) -> Node<K, V> {
+        match n {
+            None => None,
+            Some(mut nn) => if nn.right.is_none() {
+                Some(nn)
+            } else {
+                let mut r = nn.right.take().unwrap();
+                if r.right.is_none() {
+                    nn.right = Some(r);
+                    Some(nn)
+                } else {
+                    if r.right.as_ref().unwrap().level == nn.level {
+                        nn.right = r.left.take();
+                        r.val = r.val + nn.val;
+                        r.left = Some(nn);
+                        r.level += 1;
+                        Some(r)
+                    } else {
+                        nn.right = Some(r);
+                        Some(nn)
+                    }
+                }
+            },
         }
     }
 
@@ -170,7 +160,7 @@ where
 }
 
 pub struct AACumlTree<K, V> {
-    root: Option<Box<AACumlNode<K, V>>>,
+    root: Node<K, V>,
 }
 
 impl<K, V> CumlMap for AACumlTree<K, V>
@@ -186,7 +176,7 @@ where
     }
 
     fn insert(&mut self, k: Self::Key, v: Self::Value) {
-        self.root = insert_node(self.root.take(), k, v);
+        self.root = AACumlNode::insert_node(self.root.take(), k, v);
     }
 
     fn get_cuml(&self, k: Self::Key) -> Self::Value {

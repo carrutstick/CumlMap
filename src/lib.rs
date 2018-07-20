@@ -21,4 +21,5 @@ pub use boxed::*;
 mod arne;
 pub use arne::*;
 
+#[cfg(test)]
 mod tests;
