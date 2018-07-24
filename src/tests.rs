@@ -2,9 +2,31 @@ extern crate test;
 use self::test::Bencher;
 use super::*;
 
-#[test]
-fn it_works() {
-    assert_eq!(2 + 2, 4);
+macro_rules! impl_test {
+    ($basen:ident, $testn:ident, $type:ty) => {
+        #[test]
+        fn $testn() {
+            $basen::<$type>();
+        }
+    }
+}
+
+macro_rules! impl_bench_file {
+    ($basen:ident, $testn:ident, $file:expr, $type:ty) => {
+        #[bench]
+        fn $testn(b: &mut Bencher) {
+            $basen::<$type>($file, b)
+        }
+    }
+}
+            
+macro_rules! impl_bench {
+    ($basen:ident, $testn:ident, $type:ty) => {
+        #[bench]
+        fn $testn(b: &mut Bencher) {
+            $basen::<$type>(b)
+        }
+    }
 }
 
 fn test_trivial<T>()
@@ -33,37 +55,49 @@ where
     assert_eq!(t.get_quantile(4), Some(2));
     assert_eq!(t.get_quantile(6), Some(2));
     assert_eq!(t.get_quantile(10), Some(3));
+    assert_eq!(t.get_quantile(11), Some(3));
+    assert_eq!(t.get_quantile(12), None);
 }
 
-#[test]
-fn trivial_cft() {
-    test_trivial::<CumlFreqTable<i32>>();
+impl_test!(test_trivial, cft_trivial, CumlFreqTable<i32>);
+impl_test!(test_trivial, bix_trivial, BinaryIndexTree<i32>);
+impl_test!(test_trivial, dct_trivial, BoxedCumlTree<usize, i32>);
+impl_test!(test_trivial, act_trivial, ArenaCumlTree<usize, i32>);
+impl_test!(test_trivial, aat_trivial, AACumlTree<usize, i32>);
+impl_test!(test_trivial, art_trivial, AARCumlTree<usize, i32>);
+
+fn test_small_neg_mono<T>()
+where
+    T: CumlMap<Key = usize, Value = i32>,
+{
+    let mut t = T::with_capacity(4);
+    t.insert(0, -3);
+    t.insert(1, -1);
+    t.insert(2, 3);
+    t.insert(3, 1);
+
+    assert_eq!(t.get_single(0), -3);
+    assert_eq!(t.get_single(1), -1);
+    assert_eq!(t.get_single(2), 3);
+    assert_eq!(t.get_single(3), 1);
+
+    assert_eq!(t.get_cuml(0), -3);
+    assert_eq!(t.get_cuml(1), -4);
+    assert_eq!(t.get_cuml(2), -1);
+    assert_eq!(t.get_cuml(3), 0);
+
+    /* quantiles are weird with negative sizes...
+    assert_eq!(t.get_quantile(-2), Some(0));
+    assert_eq!(t.get_quantile(-4), Some(1));
+    */
 }
 
-#[test]
-fn trivial_bix() {
-    test_trivial::<BinaryIndexTree<i32>>();
-}
-
-#[test]
-fn trivial_dct() {
-    test_trivial::<BoxedCumlTree<usize, i32>>();
-}
-
-#[test]
-fn trivial_act() {
-    test_trivial::<ArenaCumlTree<usize, i32>>();
-}
-
-#[test]
-fn trivial_aat() {
-    test_trivial::<AACumlTree<usize, i32>>();
-}
-
-#[test]
-fn trivial_art() {
-    test_trivial::<AARCumlTree<usize, i32>>();
-}
+impl_test!(test_small_neg_mono, cft_small_neg_mono, CumlFreqTable<i32>);
+impl_test!(test_small_neg_mono, bix_small_neg_mono, BinaryIndexTree<i32>);
+impl_test!(test_small_neg_mono, dct_small_neg_mono, BoxedCumlTree<usize, i32>);
+impl_test!(test_small_neg_mono, act_small_neg_mono, ArenaCumlTree<usize, i32>);
+impl_test!(test_small_neg_mono, aat_small_neg_mono, AACumlTree<usize, i32>);
+impl_test!(test_small_neg_mono, art_small_neg_mono, AARCumlTree<usize, i32>);
 
 fn load_updates(fname: &str) -> (usize, Vec<usize>, Vec<i32>) {
     use std::fs::File;
@@ -92,7 +126,7 @@ fn load_updates(fname: &str) -> (usize, Vec<usize>, Vec<i32>) {
     (cap, keys, vals)
 }
 
-fn benchmark_from_file<T>(fname: &str, b: &mut Bencher)
+fn benchmark_build<T>(fname: &str, b: &mut Bencher)
 where
     T: CumlMap<Key = usize, Value = i32>,
 {
@@ -120,35 +154,12 @@ where
     assert_eq!(cm.get_cuml(1), c1);
 }
 
-#[bench]
-fn cft_bench_1_build(b: &mut Bencher) {
-    benchmark_from_file::<CumlFreqTable<i32>>("src/bench_1", b);
-}
-
-#[bench]
-fn bix_bench_1_build(b: &mut Bencher) {
-    benchmark_from_file::<BinaryIndexTree<i32>>("src/bench_1", b);
-}
-
-#[bench]
-fn dct_bench_1_build(b: &mut Bencher) {
-    benchmark_from_file::<BoxedCumlTree<usize, i32>>("src/bench_1", b);
-}
-
-#[bench]
-fn act_bench_1_build(b: &mut Bencher) {
-    benchmark_from_file::<ArenaCumlTree<usize, i32>>("src/bench_1", b);
-}
-
-#[bench]
-fn aat_bench_1_build(b: &mut Bencher) {
-    benchmark_from_file::<AACumlTree<usize, i32>>("src/bench_1", b);
-}
-
-#[bench]
-fn art_bench_1_build(b: &mut Bencher) {
-    benchmark_from_file::<AARCumlTree<usize, i32>>("src/bench_1", b);
-}
+impl_bench_file!(benchmark_build, cft_build_1, "src/bench_1", CumlFreqTable<i32>);
+impl_bench_file!(benchmark_build, bix_build_1, "src/bench_1", BinaryIndexTree<i32>);
+impl_bench_file!(benchmark_build, dct_build_1, "src/bench_1", BoxedCumlTree<usize, i32>);
+impl_bench_file!(benchmark_build, act_build_1, "src/bench_1", ArenaCumlTree<usize, i32>);
+impl_bench_file!(benchmark_build, aat_build_1, "src/bench_1", AACumlTree<usize, i32>);
+impl_bench_file!(benchmark_build, art_build_1, "src/bench_1", AARCumlTree<usize, i32>);
 
 fn benchmark_degen<T>(b: &mut Bencher)
 where
@@ -172,32 +183,9 @@ where
     }
 }
 
-#[bench]
-fn cft_bench_degen_build(b: &mut Bencher) {
-    benchmark_degen::<CumlFreqTable<i32>>(b);
-}
-
-#[bench]
-fn bix_bench_degen_build(b: &mut Bencher) {
-    benchmark_degen::<BinaryIndexTree<i32>>(b);
-}
-
-#[bench]
-fn dct_bench_degen_build(b: &mut Bencher) {
-    benchmark_degen::<BoxedCumlTree<usize, i32>>(b);
-}
-
-#[bench]
-fn act_bench_degen_build(b: &mut Bencher) {
-    benchmark_degen::<ArenaCumlTree<usize, i32>>(b);
-}
-
-#[bench]
-fn aat_bench_degen_build(b: &mut Bencher) {
-    benchmark_degen::<AACumlTree<usize, i32>>(b);
-}
-
-#[bench]
-fn art_bench_degen_build(b: &mut Bencher) {
-    benchmark_degen::<AARCumlTree<usize, i32>>(b);
-}
+impl_bench!(benchmark_degen, cft_build_degen, CumlFreqTable<i32>);
+impl_bench!(benchmark_degen, bix_build_degen, BinaryIndexTree<i32>);
+impl_bench!(benchmark_degen, dct_build_degen, BoxedCumlTree<usize, i32>);
+impl_bench!(benchmark_degen, act_build_degen, ArenaCumlTree<usize, i32>);
+impl_bench!(benchmark_degen, aat_build_degen, AACumlTree<usize, i32>);
+impl_bench!(benchmark_degen, art_build_degen, AARCumlTree<usize, i32>);
