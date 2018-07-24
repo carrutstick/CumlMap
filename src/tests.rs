@@ -60,6 +60,11 @@ fn trivial_aat() {
     test_trivial::<AACumlTree<usize, i32>>();
 }
 
+#[test]
+fn trivial_art() {
+    test_trivial::<AARCumlTree<usize, i32>>();
+}
+
 fn load_updates(fname: &str) -> (usize, Vec<usize>, Vec<i32>) {
     use std::fs::File;
     use std::io::prelude::*;
@@ -140,6 +145,11 @@ fn aat_bench_1_build(b: &mut Bencher) {
     benchmark_from_file::<AACumlTree<usize, i32>>("src/bench_1", b);
 }
 
+#[bench]
+fn art_bench_1_build(b: &mut Bencher) {
+    benchmark_from_file::<AARCumlTree<usize, i32>>("src/bench_1", b);
+}
+
 fn benchmark_degen<T>(b: &mut Bencher)
 where
     T: CumlMap<Key = usize, Value = i32>,
@@ -185,4 +195,9 @@ fn act_bench_degen_build(b: &mut Bencher) {
 #[bench]
 fn aat_bench_degen_build(b: &mut Bencher) {
     benchmark_degen::<AACumlTree<usize, i32>>(b);
+}
+
+#[bench]
+fn art_bench_degen_build(b: &mut Bencher) {
+    benchmark_degen::<AARCumlTree<usize, i32>>(b);
 }
