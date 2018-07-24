@@ -6,7 +6,7 @@ use std::ptr;
 use cmap::*;
 
 /*****************************************************************************
- * Boxed cumulative frequency tree
+ * Cumulative frequency tree with raw pointers, Andressen balancing
  *****************************************************************************/
 
 struct AARCumlNode<K, V> {
@@ -166,72 +166,62 @@ where
         }
     }
 
-    unsafe fn get_total(&self) -> V {
-        self.val() + if self.right().is_null() {
+    fn get_total(&self) -> V {
+        if self.is_null() {
             V::zero()
         } else {
-            self.right().get_total()
+            unsafe { self.val() + self.right().get_total() }
         }
     }
 
-    unsafe fn get_cuml(&self, k: K, acc: V) -> V {
-        if k < self.index() {
-            if self.left().is_null() {
-                acc
-            } else {
-                self.left().get_cuml(k, acc)
-            }
-        } else if k > self.index() {
-            if self.right().is_null() {
-                acc + self.val()
-            } else {
-                self.right().get_cuml(k, acc + self.val())
-            }
+    fn get_cuml(&self, k: K, acc: V) -> V {
+        if self.is_null() {
+            acc
         } else {
-            acc + self.val()
-        }
-    }
-
-    unsafe fn get_single(&self, k: K) -> V {
-        if k < self.index() {
-            if self.left().is_null() {
-                V::zero()
-            } else {
-                self.left().get_single(k)
-            }
-        } else if k > self.index() {
-            if self.right().is_null() {
-                V::zero()
-            } else {
-                self.right().get_single(k)
-            }
-        } else {
-            if self.left().is_null() {
-                self.val()
-            } else {
-                self.val() - self.left().get_total()
-            }
-        }
-    }
-
-    unsafe fn get_quantile(&self, v: V) -> Option<K> {
-        if v > self.val() {
-            if self.right().is_null() {
-                None
-            } else {
-                self.right().get_quantile(v - self.val())
-            }
-        } else if v < self.val() {
-            if self.left().is_null() {
-                Some(self.index())
-            } else {
-                match self.left().get_quantile(v) {
-                    None => Some(self.index()),
-                    s => s,
+            unsafe {
+                if k < self.index() {
+                    self.left().get_cuml(k, acc)
+                } else if k > self.index() {
+                    self.right().get_cuml(k, acc + self.val())
+                } else {
+                    acc + self.val()
                 }
             }
+        }
+    }
+
+    fn get_single(&self, k: K) -> V {
+        if self.is_null() {
+            V::zero()
         } else {
-            Some(self.index())
+            unsafe {
+                if k < self.index() {
+                    self.left().get_single(k)
+                } else if k > self.index() {
+                    self.right().get_single(k)
+                } else {
+                    self.val() - self.left().get_total()
+                }
+            }
+        }
+    }
+
+    fn get_quantile(&self, v: V) -> Option<K> {
+        if self.is_null() {
+            None
+        } else {
+            unsafe {
+                if v > self.val() {
+                    self.right().get_quantile(v - self.val())
+                } else if v < self.val() {
+                    match self.left().get_quantile(v) {
+                        None => Some(self.index()),
+                        s => s,
+                    }
+                } else {
+                    Some(self.index())
+                }
+            }
         }
     }
 }
@@ -259,26 +249,14 @@ where
     }
 
     fn get_cuml(&self, k: Self::Key) -> Self::Value {
-        if self.root.is_null() {
-            Self::Value::zero()
-        } else {
-            unsafe { self.root.get_cuml(k, Self::Value::zero()) }
-        }
+        self.root.get_cuml(k, Self::Value::zero())
     }
 
     fn get_single(&self, k: Self::Key) -> Self::Value {
-        if self.root.is_null() {
-            Self::Value::zero()
-        } else {
-            unsafe { self.root.get_single(k) }
-        }
+        self.root.get_single(k)
     }
 
     fn get_quantile(&self, quant: Self::Value) -> Option<Self::Key> {
-        if self.root.is_null() {
-            None
-        } else {
-            unsafe { self.root.get_quantile(quant) }
-        }
+        self.root.get_quantile(quant)
     }
 }
