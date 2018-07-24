@@ -21,7 +21,7 @@ struct Node<K, V>(*mut AARCumlNode<K, V>);
 
 impl<K, V> Clone for Node<K, V> {
     fn clone(&self) -> Node<K, V> {
-        Node ( self.0 )
+        Node(self.0)
     }
 }
 
@@ -29,23 +29,17 @@ impl<K, V> Copy for Node<K, V> {}
 
 impl<K, V> Node<K, V> {
     fn null() -> Node<K, V> {
-        Node ( ptr::null_mut() )
+        Node(ptr::null_mut())
     }
 
     fn new(k: K, v: V) -> Node<K, V> {
-        Node (
-            Box::into_raw(
-                Box::new(
-                    AARCumlNode {
-                        index: k,
-                        val: v,
-                        left: Self::null(),
-                        right: Self::null(),
-                        level: 1,
-                    }
-                )
-            )
-        )
+        Node(Box::into_raw(Box::new(AARCumlNode {
+            index: k,
+            val: v,
+            left: Self::null(),
+            right: Self::null(),
+            level: 1,
+        })))
     }
 
     fn is_null(&self) -> bool {
@@ -81,13 +75,13 @@ impl<K, V> Node<K, V> {
     }
 }
 
-impl<K, V> Node<K, V> where K: Copy {
+impl<K:Copy, V> Node<K, V> {
     unsafe fn index(&self) -> K {
         (*self.0).index
     }
 }
 
-impl<K, V> Node<K, V> where V: Copy {
+impl<K: Copy, V> Node<K, V> {
     unsafe fn val(&self) -> V {
         (*self.0).val
     }
@@ -239,9 +233,7 @@ where
     type Value = V;
 
     fn with_capacity(_k: usize) -> Self {
-        AARCumlTree {
-            root: Node::null(),
-        }
+        AARCumlTree { root: Node::null() }
     }
 
     fn insert(&mut self, k: Self::Key, v: Self::Value) {

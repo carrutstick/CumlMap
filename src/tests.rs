@@ -8,7 +8,7 @@ macro_rules! impl_test {
         fn $testn() {
             $basen::<$type>();
         }
-    }
+    };
 }
 
 macro_rules! impl_bench_file {
@@ -17,16 +17,16 @@ macro_rules! impl_bench_file {
         fn $testn(b: &mut Bencher) {
             $basen::<$type>($file, b)
         }
-    }
+    };
 }
-            
+
 macro_rules! impl_bench {
     ($basen:ident, $testn:ident, $type:ty) => {
         #[bench]
         fn $testn(b: &mut Bencher) {
             $basen::<$type>(b)
         }
-    }
+    };
 }
 
 fn test_trivial<T>()
