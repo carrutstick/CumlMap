@@ -81,7 +81,7 @@ impl<K: Copy, V> Node<K, V> {
     }
 }
 
-impl<K: Copy, V> Node<K, V> {
+impl<K, V: Copy> Node<K, V> {
     unsafe fn val(&self) -> V {
         (*self.0).val
     }
