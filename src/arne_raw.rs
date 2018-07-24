@@ -75,7 +75,7 @@ impl<K, V> Node<K, V> {
     }
 }
 
-impl<K:Copy, V> Node<K, V> {
+impl<K: Copy, V> Node<K, V> {
     unsafe fn index(&self) -> K {
         (*self.0).index
     }
