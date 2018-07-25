@@ -42,6 +42,14 @@ impl<K, V> Node<K, V> {
         })))
     }
 
+    unsafe fn clear(&mut self) {
+        if !self.is_null() {
+            self.left().clear();
+            self.right().clear();
+            Box::from_raw(self.0);
+        }
+    }
+
     fn is_null(&self) -> bool {
         self.0.is_null()
     }
@@ -222,6 +230,12 @@ where
 
 pub struct AARCumlTree<K, V> {
     root: Node<K, V>,
+}
+
+impl<K, V> Drop for AARCumlTree<K, V> {
+    fn drop(&mut self) {
+        unsafe { self.root.clear(); }
+    }
 }
 
 impl<K, V> CumlMap for AARCumlTree<K, V>

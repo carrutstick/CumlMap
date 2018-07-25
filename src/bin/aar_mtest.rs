@@ -12,9 +12,9 @@ fn main() {
     let mut t = AARCumlTree::with_capacity(10);
     t.insert(4, 2);
     t.insert(5, 2);
-    t.insert(6, 2);
-    t.insert(7, 2);
     t.insert(8, 2);
     t.insert(9, 2);
     t.insert(10, 2);
+    t.insert(6, 2);
+    t.insert(7, 2);
 }
