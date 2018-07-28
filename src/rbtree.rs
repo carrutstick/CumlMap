@@ -11,7 +11,7 @@ use cmap::*;
  * Cumulative frequency tree with raw pointers, Andressen balancing
  *****************************************************************************/
 
-#[derive(PartialEq,Clone,Copy)]
+#[derive(PartialEq,Clone,Copy,Debug)]
 enum Color {
     Red,
     Black,
@@ -229,7 +229,11 @@ where
             let mut g = p.parent(); // dad is red, so must have granddad
             let mut u = g.other_child(p);
             if u.is_null() {
-                self.right_rotate(g);
+                if p == g.left() {
+                    self.right_rotate(g);
+                } else {
+                    self.left_rotate(g);
+                }
                 g.recolor(Color::Red);
                 p.recolor(Color::Black);
             } else {
@@ -262,7 +266,10 @@ where
     unsafe fn left_rotate(&mut self, mut oldn: Node<K, V>) {
         let mut newn = oldn.right();
         oldn.set_right(newn.left());
-        oldn.right().set_parent(oldn);
+        if !oldn.right().is_null() {
+            oldn.right().set_parent(oldn);
+        }
+        newn.set_val(newn.val() + oldn.val());
         let mut par = oldn.parent();
         if par.is_null() {
             self.root = newn;
@@ -278,7 +285,10 @@ where
     unsafe fn right_rotate(&mut self, mut oldn: Node<K, V>) {
         let mut newn = oldn.left();
         oldn.set_left(newn.right());
-        oldn.left().set_parent(oldn);
+        if !oldn.left().is_null() {
+            oldn.left().set_parent(oldn);
+        }
+        oldn.set_val(oldn.val() - newn.val());
         let mut par = oldn.parent();
         if par.is_null() {
             self.root = newn;
@@ -311,11 +321,13 @@ where
             while !n.is_null() {
                 p = n;
                 if k < n.index() {
+                    n.set_val(n.val() + v);
                     n = n.left()
                 } else if k > n.index() {
                     n = n.right()
                 } else {
                     n.set_val(n.val() + v);
+                    return
                 }
             }
             n = Node::new(k, v, p);

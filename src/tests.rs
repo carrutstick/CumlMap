@@ -99,7 +99,7 @@ impl_test!(test_small_neg_mono, dct_small_neg_mono, BoxedCumlTree<usize, i32>);
 impl_test!(test_small_neg_mono, act_small_neg_mono, ArenaCumlTree<usize, i32>);
 impl_test!(test_small_neg_mono, aat_small_neg_mono, AACumlTree<usize, i32>);
 impl_test!(test_small_neg_mono, art_small_neg_mono, AARCumlTree<usize, i32>);
-// impl_test!(test_small_neg_mono, rbt_small_neg_mono, RBCumlTree<usize, i32>);
+impl_test!(test_small_neg_mono, rbt_small_neg_mono, RBCumlTree<usize, i32>);
 
 fn load_updates(fname: &str) -> (usize, Vec<usize>, Vec<i32>) {
     use std::fs::File;
@@ -162,7 +162,7 @@ impl_bench_file!(benchmark_build, dct_build_1, "src/bench_1", BoxedCumlTree<usiz
 impl_bench_file!(benchmark_build, act_build_1, "src/bench_1", ArenaCumlTree<usize, i32>);
 impl_bench_file!(benchmark_build, aat_build_1, "src/bench_1", AACumlTree<usize, i32>);
 impl_bench_file!(benchmark_build, art_build_1, "src/bench_1", AARCumlTree<usize, i32>);
-// impl_bench_file!(benchmark_build, rbt_build_1, "src/bench_1", RBCumlTree<usize, i32>);
+impl_bench_file!(benchmark_build, rbt_build_1, "src/bench_1", RBCumlTree<usize, i32>);
 
 fn benchmark_degen<T>(b: &mut Bencher)
 where
@@ -192,4 +192,4 @@ impl_bench!(benchmark_degen, dct_build_degen, BoxedCumlTree<usize, i32>);
 impl_bench!(benchmark_degen, act_build_degen, ArenaCumlTree<usize, i32>);
 impl_bench!(benchmark_degen, aat_build_degen, AACumlTree<usize, i32>);
 impl_bench!(benchmark_degen, art_build_degen, AARCumlTree<usize, i32>);
-// impl_bench!(benchmark_degen, rbt_build_degen, RBCumlTree<usize, i32>);
+impl_bench!(benchmark_degen, rbt_build_degen, RBCumlTree<usize, i32>);
