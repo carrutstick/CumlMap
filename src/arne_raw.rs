@@ -42,10 +42,10 @@ impl<K, V> Node<K, V> {
         })))
     }
 
-    unsafe fn clear(&mut self) {
+    unsafe fn free(&mut self) {
         if !self.is_null() {
-            self.left().clear();
-            self.right().clear();
+            self.left().free();
+            self.right().free();
             Box::from_raw(self.0);
         }
     }
@@ -234,7 +234,7 @@ pub struct AARCumlTree<K, V> {
 
 impl<K, V> Drop for AARCumlTree<K, V> {
     fn drop(&mut self) {
-        unsafe { self.root.clear(); }
+        unsafe { self.root.free(); }
     }
 }
 
