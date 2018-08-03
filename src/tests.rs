@@ -59,7 +59,6 @@ where
     assert_eq!(t.get_quantile(12), None);
 }
 
-impl_test!(test_trivial, cft_trivial, CumlFreqTable<i32>);
 impl_test!(test_trivial, bix_trivial, BinaryIndexTree<i32>);
 impl_test!(test_trivial, dct_trivial, BoxedCumlTree<usize, i32>);
 impl_test!(test_trivial, act_trivial, ArenaCumlTree<usize, i32>);
@@ -93,7 +92,6 @@ where
     */
 }
 
-impl_test!(test_small_neg_mono, cft_small_neg_mono, CumlFreqTable<i32>);
 impl_test!(test_small_neg_mono, bix_small_neg_mono, BinaryIndexTree<i32>);
 impl_test!(test_small_neg_mono, dct_small_neg_mono, BoxedCumlTree<usize, i32>);
 impl_test!(test_small_neg_mono, act_small_neg_mono, ArenaCumlTree<usize, i32>);
@@ -156,7 +154,6 @@ where
     assert_eq!(cm.get_cuml(1), c1);
 }
 
-impl_bench_file!(benchmark_build, cft_1_build, "src/bench_1", CumlFreqTable<i32>);
 impl_bench_file!(benchmark_build, bix_1_build, "src/bench_1", BinaryIndexTree<i32>);
 impl_bench_file!(benchmark_build, dct_1_build, "src/bench_1", BoxedCumlTree<usize, i32>);
 impl_bench_file!(benchmark_build, act_1_build, "src/bench_1", ArenaCumlTree<usize, i32>);
@@ -184,7 +181,6 @@ where
     });
 }
 
-impl_bench_file!(benchmark_get_cuml, cft_1_getc, "src/bench_1", CumlFreqTable<i32>);
 impl_bench_file!(benchmark_get_cuml, bix_1_getc, "src/bench_1", BinaryIndexTree<i32>);
 impl_bench_file!(benchmark_get_cuml, dct_1_getc, "src/bench_1", BoxedCumlTree<usize, i32>);
 impl_bench_file!(benchmark_get_cuml, act_1_getc, "src/bench_1", ArenaCumlTree<usize, i32>);
@@ -214,10 +210,35 @@ where
     }
 }
 
-impl_bench!(benchmark_degen, cft_build_degen, CumlFreqTable<i32>);
 impl_bench!(benchmark_degen, bix_build_degen, BinaryIndexTree<i32>);
 impl_bench!(benchmark_degen, dct_build_degen, BoxedCumlTree<usize, i32>);
 impl_bench!(benchmark_degen, act_build_degen, ArenaCumlTree<usize, i32>);
 impl_bench!(benchmark_degen, aat_build_degen, AACumlTree<usize, i32>);
 impl_bench!(benchmark_degen, art_build_degen, AARCumlTree<usize, i32>);
 impl_bench!(benchmark_degen, rbt_build_degen, RBCumlTree<usize, i32>);
+
+fn benchmark_degen_get_cuml<T>(b: &mut Bencher)
+where
+    T: CumlMap<Key = usize, Value = i32>,
+{
+    let n = 1000;
+    let mut cm = T::with_capacity(n);
+    for i in 1..n {
+        cm.insert(i, i as i32);
+    }
+
+    let mut c = 0;
+    b.iter(|| {
+        for i in 0..n {
+            let j = test::black_box(i);
+            c = cm.get_cuml(j);
+        }
+    });
+}
+
+impl_bench!(benchmark_degen_get_cuml, bix_getc_degen, BinaryIndexTree<i32>);
+impl_bench!(benchmark_degen_get_cuml, dct_getc_degen, BoxedCumlTree<usize, i32>);
+impl_bench!(benchmark_degen_get_cuml, act_getc_degen, ArenaCumlTree<usize, i32>);
+impl_bench!(benchmark_degen_get_cuml, aat_getc_degen, AACumlTree<usize, i32>);
+impl_bench!(benchmark_degen_get_cuml, art_getc_degen, AARCumlTree<usize, i32>);
+impl_bench!(benchmark_degen_get_cuml, rbt_getc_degen, RBCumlTree<usize, i32>);

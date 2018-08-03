@@ -6,9 +6,6 @@ extern crate num_traits;
 mod cmap;
 pub use cmap::*;
 
-mod freqtable;
-pub use freqtable::*;
-
 mod arena;
 pub use arena::*;
 
