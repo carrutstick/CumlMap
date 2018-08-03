@@ -156,13 +156,41 @@ where
     assert_eq!(cm.get_cuml(1), c1);
 }
 
-impl_bench_file!(benchmark_build, cft_build_1, "src/bench_1", CumlFreqTable<i32>);
-impl_bench_file!(benchmark_build, bix_build_1, "src/bench_1", BinaryIndexTree<i32>);
-impl_bench_file!(benchmark_build, dct_build_1, "src/bench_1", BoxedCumlTree<usize, i32>);
-impl_bench_file!(benchmark_build, act_build_1, "src/bench_1", ArenaCumlTree<usize, i32>);
-impl_bench_file!(benchmark_build, aat_build_1, "src/bench_1", AACumlTree<usize, i32>);
-impl_bench_file!(benchmark_build, art_build_1, "src/bench_1", AARCumlTree<usize, i32>);
-impl_bench_file!(benchmark_build, rbt_build_1, "src/bench_1", RBCumlTree<usize, i32>);
+impl_bench_file!(benchmark_build, cft_1_build, "src/bench_1", CumlFreqTable<i32>);
+impl_bench_file!(benchmark_build, bix_1_build, "src/bench_1", BinaryIndexTree<i32>);
+impl_bench_file!(benchmark_build, dct_1_build, "src/bench_1", BoxedCumlTree<usize, i32>);
+impl_bench_file!(benchmark_build, act_1_build, "src/bench_1", ArenaCumlTree<usize, i32>);
+impl_bench_file!(benchmark_build, aat_1_build, "src/bench_1", AACumlTree<usize, i32>);
+impl_bench_file!(benchmark_build, art_1_build, "src/bench_1", AARCumlTree<usize, i32>);
+impl_bench_file!(benchmark_build, rbt_1_build, "src/bench_1", RBCumlTree<usize, i32>);
+
+fn benchmark_get_cuml<T>(fname: &str, b: &mut Bencher)
+where
+    T: CumlMap<Key = usize, Value = i32>,
+{
+    let (cap, keys, vals) = load_updates(fname);
+    let mut cm = T::with_capacity(cap);
+    for i in 0..keys.len() {
+        cm.insert(keys[i], vals[i]);
+    }
+
+    let mx = *keys.iter().max().unwrap();
+    let mut c = 0;
+    b.iter(|| {
+        for i in 0..mx {
+            let j = test::black_box(i);
+            c = cm.get_cuml(j);
+        }
+    });
+}
+
+impl_bench_file!(benchmark_get_cuml, cft_1_getc, "src/bench_1", CumlFreqTable<i32>);
+impl_bench_file!(benchmark_get_cuml, bix_1_getc, "src/bench_1", BinaryIndexTree<i32>);
+impl_bench_file!(benchmark_get_cuml, dct_1_getc, "src/bench_1", BoxedCumlTree<usize, i32>);
+impl_bench_file!(benchmark_get_cuml, act_1_getc, "src/bench_1", ArenaCumlTree<usize, i32>);
+impl_bench_file!(benchmark_get_cuml, aat_1_getc, "src/bench_1", AACumlTree<usize, i32>);
+impl_bench_file!(benchmark_get_cuml, art_1_getc, "src/bench_1", AARCumlTree<usize, i32>);
+impl_bench_file!(benchmark_get_cuml, rbt_1_getc, "src/bench_1", RBCumlTree<usize, i32>);
 
 fn benchmark_degen<T>(b: &mut Bencher)
 where
