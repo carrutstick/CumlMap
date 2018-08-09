@@ -13,6 +13,15 @@ pub struct BinaryIndexTree<V> {
     data: Vec<V>,
 }
 
+impl<V> BinaryIndexTree<V> {
+    fn new() -> BinaryIndexTree<V> {
+        BinaryIndexTree {
+            capacity: 0,
+            data: Vec::new(),
+        }
+    }
+}
+
 impl<V> CumlMap for BinaryIndexTree<V>
 where
     V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
@@ -87,4 +96,48 @@ where
             Some(index)
         }
     }
+}
+
+/*****************************************************************************
+ * Extensible Binary Index Tree, allowing negative indices
+ ****************************************************************************/
+
+pub struct ExtensibleBinaryIndexTree<V> {
+    offset: i64, // minimum key in tree
+    tree: BinaryIndexTree<V>,
+}
+
+impl<V> for ExtensibleBinaryIndexTree<V> {
+    fn with_offset(c: usize) -> Self {
+        Self {
+            offset: 0,
+            tree: BinaryIndexTree::with_capacity(c),
+        }
+    }
+
+    fn with_extent(o: i64, c: i64) {
+        Self {
+            offset: o,
+            tree: BinaryIndexTree::with_capacity(c),
+        }
+    }
+}
+
+impl<V> for ExtensibleBinaryIndexTree<V> {
+where
+    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
+{
+    fn extend_right(&mut self) {
+    }
+
+    fn extend_left(&mut self) {
+    }
+}
+
+impl<V> CumlMap for ExtensibleBinaryIndexTree<V>
+where
+    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
+{
+    type Key = i64;
+    type Value = V;
 }
