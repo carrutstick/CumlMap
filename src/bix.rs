@@ -1,6 +1,7 @@
 extern crate num_traits;
 use num_traits::Zero;
 use std::ops::{Add, Sub};
+use std::mem;
 
 use cmap::*;
 
@@ -75,25 +76,27 @@ where
     }
 
     fn get_quantile(&self, quant: Self::Value) -> Option<Self::Key> {
-        let mut index = 0;
-        let mut mask = self.capacity / 2;
-        let mut quant = quant - self.data[0];
-        while mask != 0 {
-            let test = index + mask;
-            if quant >= self.data[test] {
-                quant = quant - self.data[test];
-                index = test;
+        if quant <= self.data[0] {
+            Some(0)
+        } else {
+            let mut step = self.capacity.next_power_of_two() >> 1;
+            let mut ix = 0;
+            let mut quant = quant - self.data[0];
+            while step > 0 {
+                println!("step: {}, ix: {}", step, ix);
+                if ix + step < self.capacity && self.data[ix + step] < quant {
+                    ix += step;
+                    quant = quant - self.data[ix];
+                }
+                step >>= 1;
             }
-            mask >>= 1;
-        }
-        if quant > Self::Value::zero() {
-            if index + 1 < self.capacity {
-                Some(index + 1)
+            if quant == Self::Value::zero() {
+                Some(ix)
+            } else if ix + 1 < self.capacity {
+                Some(ix + 1)
             } else {
                 None
             }
-        } else {
-            Some(index)
         }
     }
 }
@@ -107,30 +110,57 @@ pub struct ExtensibleBinaryIndexTree<V> {
     tree: BinaryIndexTree<V>,
 }
 
-impl<V> for ExtensibleBinaryIndexTree<V> {
-    fn with_offset(c: usize) -> Self {
-        Self {
-            offset: 0,
-            tree: BinaryIndexTree::with_capacity(c),
-        }
-    }
-
-    fn with_extent(o: i64, c: i64) {
+impl<V> ExtensibleBinaryIndexTree<V>
+where
+    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
+{
+    fn with_extent(o: i64, c: usize) -> Self {
         Self {
             offset: o,
             tree: BinaryIndexTree::with_capacity(c),
         }
     }
-}
 
-impl<V> for ExtensibleBinaryIndexTree<V> {
-where
-    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
-{
-    fn extend_right(&mut self) {
+    fn extent(&self) -> (i64, i64) {
+        (self.offset, self.offset + (self.tree.capacity as i64))
     }
 
-    fn extend_left(&mut self) {
+    fn extend_right(&mut self, by: usize) {
+        self.tree.data.reserve(by);
+        self.tree.capacity += by;
+    }
+
+    fn extend_left(&mut self, by: usize) {
+        let oldcap = self.tree.capacity;
+        let cap = oldcap + by;
+        let oldoff = self.offset;
+        let new = BinaryIndexTree::with_capacity(cap);
+        let old = mem::replace(&mut self.tree, new);
+        self.offset -= by as i64;
+        // Struct should now be in self-consistent form
+
+        for i in 0..oldcap {
+            self.insert(i as i64 +  oldoff, old.get_single(i))
+        }
+    }
+
+    fn ensure_contains(&mut self, key: i64) {
+        let (l, r) = self.extent();
+        if key < l {
+            let extra = (l - key) as usize;
+            let mut cap = self.tree.capacity;
+            while cap < extra {
+                cap <<= 1;
+            }
+            self.extend_left(cap);
+        } else if key >= r {
+            let extra = (key - r + 1) as usize;
+            let mut cap = self.tree.capacity;
+            while cap < extra {
+                cap <<= 1;
+            }
+            self.extend_right(cap);
+        }
     }
 }
 
@@ -140,4 +170,29 @@ where
 {
     type Key = i64;
     type Value = V;
+
+    fn with_capacity(c: usize) -> Self {
+        Self {
+            offset: 0,
+            tree: BinaryIndexTree::with_capacity(c),
+        }
+    }
+
+    fn insert(&mut self, key: Self::Key, val: Self::Value) {
+        self.ensure_contains(key);
+        self.tree.insert((key - self.offset) as usize, val)
+    }
+
+    fn get_cuml(&self, key: Self::Key) -> Self::Value {
+        self.tree.get_cuml((key - self.offset) as usize)
+    }
+
+    fn get_single(&self, key: Self::Key) -> Self::Value {
+        self.tree.get_single((key - self.offset) as usize)
+    }
+
+    fn get_quantile(&self, quant: Self::Value) -> Option<Self::Key> {
+        println!("offset: {}", self.offset);
+        self.tree.get_quantile(quant).map(|x| x as i64 + self.offset)
+    }
 }

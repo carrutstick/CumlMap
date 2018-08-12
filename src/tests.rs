@@ -33,29 +33,29 @@ fn test_trivial<T>()
 where
     T: CumlMap<Key = usize, Value = i32>,
 {
-    let mut t = T::with_capacity(4);
+    let mut t = T::with_capacity(5);
     t.insert(0, 1);
     t.insert(1, 2);
     t.insert(2, 3);
-    t.insert(3, 5);
+    t.insert(4, 5);
 
     assert_eq!(t.get_single(0), 1);
     assert_eq!(t.get_single(1), 2);
     assert_eq!(t.get_single(2), 3);
-    assert_eq!(t.get_single(3), 5);
+    assert_eq!(t.get_single(4), 5);
 
     assert_eq!(t.get_cuml(0), 1);
     assert_eq!(t.get_cuml(1), 3);
     assert_eq!(t.get_cuml(2), 6);
-    assert_eq!(t.get_cuml(3), 11);
+    assert_eq!(t.get_cuml(4), 11);
 
     assert_eq!(t.get_quantile(1), Some(0));
     assert_eq!(t.get_quantile(2), Some(1));
     assert_eq!(t.get_quantile(3), Some(1));
     assert_eq!(t.get_quantile(4), Some(2));
     assert_eq!(t.get_quantile(6), Some(2));
-    assert_eq!(t.get_quantile(10), Some(3));
-    assert_eq!(t.get_quantile(11), Some(3));
+    assert_eq!(t.get_quantile(10), Some(4));
+    assert_eq!(t.get_quantile(11), Some(4));
     assert_eq!(t.get_quantile(12), None);
 }
 
@@ -242,3 +242,42 @@ impl_bench!(benchmark_degen_get_cuml, act_getc_degen, ArenaCumlTree<usize, i32>)
 impl_bench!(benchmark_degen_get_cuml, aat_getc_degen, AACumlTree<usize, i32>);
 impl_bench!(benchmark_degen_get_cuml, art_getc_degen, AARCumlTree<usize, i32>);
 impl_bench!(benchmark_degen_get_cuml, rbt_getc_degen, RBCumlTree<usize, i32>);
+
+fn test_neg_key<T>()
+where
+    T: CumlMap<Key = i64, Value = i32>,
+{
+    let mut t = T::with_capacity(4);
+    t.insert(-2, 1);
+    t.insert(1, 2);
+    t.insert(-1, 3);
+    t.insert(3, 5);
+
+    assert_eq!(t.get_single(-2), 1);
+    assert_eq!(t.get_single(-1), 3);
+    assert_eq!(t.get_single(0), 0);
+    assert_eq!(t.get_single(1), 2);
+    assert_eq!(t.get_single(3), 5);
+
+    assert_eq!(t.get_cuml(-2), 1);
+    assert_eq!(t.get_cuml(-1), 4);
+    assert_eq!(t.get_cuml(0), 4);
+    assert_eq!(t.get_cuml(1), 6);
+    assert_eq!(t.get_cuml(3), 11);
+
+    assert_eq!(t.get_quantile(1), Some(-2));
+    assert_eq!(t.get_quantile(2), Some(-1));
+    assert_eq!(t.get_quantile(3), Some(-1));
+    assert_eq!(t.get_quantile(4), Some(-1));
+    assert_eq!(t.get_quantile(6), Some(1));
+    assert_eq!(t.get_quantile(10), Some(3));
+    assert_eq!(t.get_quantile(11), Some(3));
+    assert_eq!(t.get_quantile(12), None);
+}
+
+impl_test!(test_neg_key, eix_neg_key, ExtensibleBinaryIndexTree<i32>);
+impl_test!(test_neg_key, dct_neg_key, BoxedCumlTree<i64, i32>);
+impl_test!(test_neg_key, act_neg_key, ArenaCumlTree<i64, i32>);
+impl_test!(test_neg_key, aat_neg_key, AACumlTree<i64, i32>);
+impl_test!(test_neg_key, art_neg_key, AARCumlTree<i64, i32>);
+impl_test!(test_neg_key, rbt_neg_key, RBCumlTree<i64, i32>);
