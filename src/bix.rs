@@ -3,6 +3,7 @@ use num_traits::Zero;
 use std::ops::{Add, Sub};
 use std::mem;
 use std::cmp;
+use std::fmt::Debug;
 
 use cmap::*;
 
@@ -80,7 +81,6 @@ where
             let mut ix = 0;
             let mut quant = quant - self.data[0];
             while step > 0 {
-                println!("step: {}, ix: {}", step, ix);
                 if ix + step < self.capacity && self.data[ix + step] < quant {
                     ix += step;
                     quant = quant - self.data[ix];
@@ -109,7 +109,7 @@ pub struct ExtensibleBinaryIndexTree<V> {
 
 impl<V> ExtensibleBinaryIndexTree<V>
 where
-    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
+    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord + Debug,
 {
     pub fn new() -> Self {
         Self {
@@ -136,58 +136,42 @@ where
         (self.offset, self.offset + (self.tree.capacity as i64))
     }
 
-    fn extend_right(&mut self, by: usize) {
-        self.tree.data.reserve(by);
-        for i in 0..by {
-            self.tree.data.push(V::zero());
-        }
-        self.tree.capacity += by;
-    }
-
-    fn extend_left(&mut self, by: usize) {
+    fn extend(&mut self, by: i64) {
         let oldcap = self.tree.capacity;
-        let cap = oldcap + by;
-        let oldoff = self.offset;
+        let cap = oldcap + by.abs() as usize;
         let new = BinaryIndexTree::with_capacity(cap);
         let old = mem::replace(&mut self.tree, new);
-        self.offset -= by as i64;
-        // Struct should now be in self-consistent form
+        let oldoff = self.offset;
+        self.offset += cmp::min(by, 0);
 
         for i in 0..oldcap {
-            self.tree.insert(i +  by, old.get_single(i))
+            self.tree.insert((i as i64 - self.offset + oldoff) as usize, old.get_single(i));
         }
     }
 
     pub fn ensure_contains(&mut self, key: i64) {
         let (l, r) = self.extent();
-        if key < l {
-            let extra = (l - key) as usize;
-            let mut cap = cmp::max(8, self.tree.capacity);
-            while cap < extra {
-                cap <<= 1;
-            }
-            self.extend_left(cap);
-        } else if key >= r {
-            let extra = (key - r + 1) as usize;
-            let mut cap = cmp::max(8, self.tree.capacity);
-            while cap < extra {
-                cap <<= 1;
-            }
-            self.extend_right(cap);
+        let extra = if key >= r { key - r + 1 }
+            else if key < l { key - l }
+            else { return };
+        let mut cap = cmp::max(8, self.tree.capacity as i64) * extra.signum();
+        while cap.abs() < extra.abs() {
+            cap *= 2;
         }
+        self.extend(cap);
     }
 }
 
 impl<V> CumlMap for ExtensibleBinaryIndexTree<V>
 where
-    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
+    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord + Debug,
 {
     type Key = i64;
     type Value = V;
 
     fn insert(&mut self, key: Self::Key, val: Self::Value) {
         self.ensure_contains(key);
-        self.tree.insert((key - self.offset) as usize, val)
+        self.tree.insert((key - self.offset) as usize, val);
     }
 
     fn get_cuml(&self, key: Self::Key) -> Self::Value {
@@ -199,7 +183,6 @@ where
     }
 
     fn get_quantile(&self, quant: Self::Value) -> Option<Self::Key> {
-        println!("offset: {}", self.offset);
         self.tree.get_quantile(quant).map(|x| x as i64 + self.offset)
     }
 }
