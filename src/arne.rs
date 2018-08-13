@@ -163,6 +163,12 @@ pub struct AACumlTree<K, V> {
     root: Node<K, V>,
 }
 
+impl<K, V> AACumlTree<K, V> {
+    pub fn new() -> Self {
+        AACumlTree { root: None }
+    }
+}
+
 impl<K, V> CumlMap for AACumlTree<K, V>
 where
     K: Add<Output = K> + Sub<Output = K> + Zero + Copy + Ord,
@@ -170,10 +176,6 @@ where
 {
     type Key = K;
     type Value = V;
-
-    fn with_capacity(_k: usize) -> Self {
-        AACumlTree { root: None }
-    }
 
     fn insert(&mut self, k: Self::Key, v: Self::Value) {
         self.root = AACumlNode::insert_node(self.root.take(), k, v);

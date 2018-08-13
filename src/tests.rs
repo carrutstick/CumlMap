@@ -2,103 +2,83 @@ extern crate test;
 use self::test::Bencher;
 use super::*;
 
-macro_rules! impl_test {
-    ($basen:ident, $testn:ident, $type:ty) => {
+macro_rules! test_trivial {
+    ($testn:ident, $type:expr) => {
         #[test]
         fn $testn() {
-            $basen::<$type>();
+            let mut t = $type;
+            t.insert(0, 1);
+            t.insert(1, 2);
+            t.insert(2, 3);
+            t.insert(4, 5);
+
+            assert_eq!(t.get_single(0), 1);
+            assert_eq!(t.get_single(1), 2);
+            assert_eq!(t.get_single(2), 3);
+            assert_eq!(t.get_single(4), 5);
+
+            assert_eq!(t.get_cuml(0), 1);
+            assert_eq!(t.get_cuml(1), 3);
+            assert_eq!(t.get_cuml(2), 6);
+            assert_eq!(t.get_cuml(4), 11);
+
+            assert_eq!(t.get_quantile(1), Some(0));
+            assert_eq!(t.get_quantile(2), Some(1));
+            assert_eq!(t.get_quantile(3), Some(1));
+            assert_eq!(t.get_quantile(4), Some(2));
+            assert_eq!(t.get_quantile(6), Some(2));
+            assert_eq!(t.get_quantile(10), Some(4));
+            assert_eq!(t.get_quantile(11), Some(4));
+            assert_eq!(t.get_quantile(12), None);
         }
     };
 }
 
-macro_rules! impl_bench_file {
-    ($basen:ident, $testn:ident, $file:expr, $type:ty) => {
-        #[bench]
-        fn $testn(b: &mut Bencher) {
-            $basen::<$type>($file, b)
+test_trivial!(bix_trivial, BinaryIndexTree::with_capacity(5));
+test_trivial!(eix_trivial, ExtensibleBinaryIndexTree::new());
+test_trivial!(dct_trivial, BoxedCumlTree::new());
+test_trivial!(act_trivial, ArenaCumlTree::new());
+test_trivial!(aat_trivial, AACumlTree::new());
+test_trivial!(art_trivial, AARCumlTree::new());
+test_trivial!(rbt_trivial, RBCumlTree::new());
+
+macro_rules! test_small_neg_mono {
+    ($testn:ident, $type:expr) => {
+        #[test]
+        fn $testn() {
+            let mut t = $type;
+            t.insert(0, -3);
+            t.insert(1, -1);
+            t.insert(2, 3);
+            t.insert(3, 1);
+
+            assert_eq!(t.get_single(0), -3);
+            assert_eq!(t.get_single(1), -1);
+            assert_eq!(t.get_single(2), 3);
+            assert_eq!(t.get_single(3), 1);
+
+            assert_eq!(t.get_cuml(0), -3);
+            assert_eq!(t.get_cuml(1), -4);
+            assert_eq!(t.get_cuml(2), -1);
+            assert_eq!(t.get_cuml(3), 0);
+
+            /* quantiles are weird with negative sizes...
+            assert_eq!(t.get_quantile(-2), Some(0));
+            assert_eq!(t.get_quantile(-4), Some(1));
+            */
         }
     };
 }
 
-macro_rules! impl_bench {
-    ($basen:ident, $testn:ident, $type:ty) => {
-        #[bench]
-        fn $testn(b: &mut Bencher) {
-            $basen::<$type>(b)
-        }
-    };
-}
+test_small_neg_mono!(bix_small_neg_mono, BinaryIndexTree::with_capacity(5));
+test_small_neg_mono!(eix_small_neg_mono, ExtensibleBinaryIndexTree::new());
+test_small_neg_mono!(dct_small_neg_mono, BoxedCumlTree::new());
+test_small_neg_mono!(act_small_neg_mono, ArenaCumlTree::new());
+test_small_neg_mono!(aat_small_neg_mono, AACumlTree::new());
+test_small_neg_mono!(art_small_neg_mono, AARCumlTree::new());
+test_small_neg_mono!(rbt_small_neg_mono, RBCumlTree::new());
 
-fn test_trivial<T>()
-where
-    T: CumlMap<Key = usize, Value = i32>,
-{
-    let mut t = T::with_capacity(5);
-    t.insert(0, 1);
-    t.insert(1, 2);
-    t.insert(2, 3);
-    t.insert(4, 5);
-
-    assert_eq!(t.get_single(0), 1);
-    assert_eq!(t.get_single(1), 2);
-    assert_eq!(t.get_single(2), 3);
-    assert_eq!(t.get_single(4), 5);
-
-    assert_eq!(t.get_cuml(0), 1);
-    assert_eq!(t.get_cuml(1), 3);
-    assert_eq!(t.get_cuml(2), 6);
-    assert_eq!(t.get_cuml(4), 11);
-
-    assert_eq!(t.get_quantile(1), Some(0));
-    assert_eq!(t.get_quantile(2), Some(1));
-    assert_eq!(t.get_quantile(3), Some(1));
-    assert_eq!(t.get_quantile(4), Some(2));
-    assert_eq!(t.get_quantile(6), Some(2));
-    assert_eq!(t.get_quantile(10), Some(4));
-    assert_eq!(t.get_quantile(11), Some(4));
-    assert_eq!(t.get_quantile(12), None);
-}
-
-impl_test!(test_trivial, bix_trivial, BinaryIndexTree<i32>);
-impl_test!(test_trivial, dct_trivial, BoxedCumlTree<usize, i32>);
-impl_test!(test_trivial, act_trivial, ArenaCumlTree<usize, i32>);
-impl_test!(test_trivial, aat_trivial, AACumlTree<usize, i32>);
-impl_test!(test_trivial, art_trivial, AARCumlTree<usize, i32>);
-impl_test!(test_trivial, rbt_trivial, RBCumlTree<usize, i32>);
-
-fn test_small_neg_mono<T>()
-where
-    T: CumlMap<Key = usize, Value = i32>,
-{
-    let mut t = T::with_capacity(4);
-    t.insert(0, -3);
-    t.insert(1, -1);
-    t.insert(2, 3);
-    t.insert(3, 1);
-
-    assert_eq!(t.get_single(0), -3);
-    assert_eq!(t.get_single(1), -1);
-    assert_eq!(t.get_single(2), 3);
-    assert_eq!(t.get_single(3), 1);
-
-    assert_eq!(t.get_cuml(0), -3);
-    assert_eq!(t.get_cuml(1), -4);
-    assert_eq!(t.get_cuml(2), -1);
-    assert_eq!(t.get_cuml(3), 0);
-
-    /* quantiles are weird with negative sizes...
-    assert_eq!(t.get_quantile(-2), Some(0));
-    assert_eq!(t.get_quantile(-4), Some(1));
-    */
-}
-
-impl_test!(test_small_neg_mono, bix_small_neg_mono, BinaryIndexTree<i32>);
-impl_test!(test_small_neg_mono, dct_small_neg_mono, BoxedCumlTree<usize, i32>);
-impl_test!(test_small_neg_mono, act_small_neg_mono, ArenaCumlTree<usize, i32>);
-impl_test!(test_small_neg_mono, aat_small_neg_mono, AACumlTree<usize, i32>);
-impl_test!(test_small_neg_mono, art_small_neg_mono, AARCumlTree<usize, i32>);
-impl_test!(test_small_neg_mono, rbt_small_neg_mono, RBCumlTree<usize, i32>);
-
+/*
 fn load_updates(fname: &str) -> (usize, Vec<usize>, Vec<i32>) {
     use std::fs::File;
     use std::io::prelude::*;
@@ -281,3 +261,4 @@ impl_test!(test_neg_key, act_neg_key, ArenaCumlTree<i64, i32>);
 impl_test!(test_neg_key, aat_neg_key, AACumlTree<i64, i32>);
 impl_test!(test_neg_key, art_neg_key, AARCumlTree<i64, i32>);
 impl_test!(test_neg_key, rbt_neg_key, RBCumlTree<i64, i32>);
+*/

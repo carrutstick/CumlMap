@@ -210,6 +210,12 @@ pub struct RBCumlTree<K, V> {
     root: Node<K, V>,
 }
 
+impl<K, V> RBCumlTree<K, V> {
+    pub fn new() -> Self {
+        RBCumlTree { root: Node::null() }
+    }
+}
+
 impl<K, V> Drop for RBCumlTree<K, V> {
     fn drop(&mut self) {
         unsafe { self.root.free(); }
@@ -309,10 +315,6 @@ where
 {
     type Key = K;
     type Value = V;
-
-    fn with_capacity(_k: usize) -> Self {
-        RBCumlTree { root: Node::null() }
-    }
 
     fn insert(&mut self, k: Self::Key, v: Self::Value) {
         let mut n = self.root;

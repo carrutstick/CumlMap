@@ -24,6 +24,7 @@ pub struct ArenaCumlTree<K, V> {
 
 impl<K, V> ArenaCumlTree<K, V>
 where
+    K: Add<Output = K> + Sub<Output = K> + Zero + Copy + Ord,
     V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
 {
     fn get_total(&self, n: &Option<NonZeroUsize>) -> V {
@@ -36,17 +37,23 @@ where
         }
         acc
     }
-}
 
-impl<K, V> CumlMap for ArenaCumlTree<K, V>
-where
-    K: Add<Output = K> + Sub<Output = K> + Zero + Copy + Ord,
-    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
-{
-    type Key = K;
-    type Value = V;
+    pub fn new() -> Self {
+        let mut nodes = Vec::new();
+        nodes.push(ArenaCumlNode {
+            key: K::zero(),
+            val: V::zero(),
+            left: None,
+            right: None,
+        });
+        ArenaCumlTree {
+            nodes: nodes,
+            root: None,
+        }
+    }
 
-    fn with_capacity(c: usize) -> Self {
+
+    pub fn with_capacity(c: usize) -> Self {
         let mut nodes = Vec::with_capacity(c);
         nodes.push(ArenaCumlNode {
             key: K::zero(),
@@ -59,6 +66,15 @@ where
             root: None,
         }
     }
+}
+
+impl<K, V> CumlMap for ArenaCumlTree<K, V>
+where
+    K: Add<Output = K> + Sub<Output = K> + Zero + Copy + Ord,
+    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
+{
+    type Key = K;
+    type Value = V;
 
     fn insert(&mut self, k: Self::Key, v: Self::Value) {
         let l = self.nodes.len();

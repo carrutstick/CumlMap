@@ -20,7 +20,7 @@ where
     K: Add<Output = K> + Sub<Output = K> + Zero + Copy + Ord,
     V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
 {
-    fn new(k: K, v: V) -> BoxedCumlNode<K, V> {
+    fn new(k: K, v: V) -> Self {
         BoxedCumlNode {
             index: k,
             val: v,
@@ -112,6 +112,12 @@ pub struct BoxedCumlTree<K, V> {
     root: Option<Box<BoxedCumlNode<K, V>>>,
 }
 
+impl<K, V> BoxedCumlTree<K, V> {
+    pub fn new() -> Self {
+        BoxedCumlTree { root: None }
+    }
+}
+
 impl<K, V> CumlMap for BoxedCumlTree<K, V>
 where
     K: Add<Output = K> + Sub<Output = K> + Zero + Copy + Ord,
@@ -119,10 +125,6 @@ where
 {
     type Key = K;
     type Value = V;
-
-    fn with_capacity(_k: usize) -> Self {
-        BoxedCumlTree { root: None }
-    }
 
     fn insert(&mut self, k: Self::Key, v: Self::Value) {
         match self.root {

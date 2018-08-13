@@ -2,6 +2,7 @@ extern crate num_traits;
 use num_traits::Zero;
 use std::ops::{Add, Sub};
 use std::mem;
+use std::cmp;
 
 use cmap::*;
 
@@ -14,11 +15,14 @@ pub struct BinaryIndexTree<V> {
     data: Vec<V>,
 }
 
-impl<V> BinaryIndexTree<V> {
-    fn new() -> BinaryIndexTree<V> {
+impl<V> BinaryIndexTree<V>
+where
+    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
+{
+    pub fn with_capacity(c: usize) -> BinaryIndexTree<V> {
         BinaryIndexTree {
-            capacity: 0,
-            data: Vec::new(),
+            capacity: c,
+            data: vec![V::zero(); c],
         }
     }
 }
@@ -29,13 +33,6 @@ where
 {
     type Key = usize;
     type Value = V;
-
-    fn with_capacity(c: usize) -> BinaryIndexTree<V> {
-        BinaryIndexTree {
-            capacity: c,
-            data: vec![V::zero(); c],
-        }
-    }
 
     fn insert(&mut self, key: Self::Key, val: Self::Value) {
         assert!(key < self.capacity);
@@ -106,7 +103,7 @@ where
  ****************************************************************************/
 
 pub struct ExtensibleBinaryIndexTree<V> {
-    offset: i64, // minimum key in tree
+    offset: i64, // minimum possible key in mapping
     tree: BinaryIndexTree<V>,
 }
 
@@ -114,7 +111,21 @@ impl<V> ExtensibleBinaryIndexTree<V>
 where
     V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
 {
-    fn with_extent(o: i64, c: usize) -> Self {
+    pub fn new() -> Self {
+        Self {
+            offset: 0,
+            tree: BinaryIndexTree::with_capacity(0),
+        }
+    }
+
+    pub fn with_capacity(c: usize) -> Self {
+        Self {
+            offset: 0,
+            tree: BinaryIndexTree::with_capacity(c),
+        }
+    }
+
+    pub fn with_extent(o: i64, c: usize) -> Self {
         Self {
             offset: o,
             tree: BinaryIndexTree::with_capacity(c),
@@ -127,6 +138,9 @@ where
 
     fn extend_right(&mut self, by: usize) {
         self.tree.data.reserve(by);
+        for i in 0..by {
+            self.tree.data.push(V::zero());
+        }
         self.tree.capacity += by;
     }
 
@@ -140,22 +154,22 @@ where
         // Struct should now be in self-consistent form
 
         for i in 0..oldcap {
-            self.insert(i as i64 +  oldoff, old.get_single(i))
+            self.tree.insert(i +  by, old.get_single(i))
         }
     }
 
-    fn ensure_contains(&mut self, key: i64) {
+    pub fn ensure_contains(&mut self, key: i64) {
         let (l, r) = self.extent();
         if key < l {
             let extra = (l - key) as usize;
-            let mut cap = self.tree.capacity;
+            let mut cap = cmp::max(8, self.tree.capacity);
             while cap < extra {
                 cap <<= 1;
             }
             self.extend_left(cap);
         } else if key >= r {
             let extra = (key - r + 1) as usize;
-            let mut cap = self.tree.capacity;
+            let mut cap = cmp::max(8, self.tree.capacity);
             while cap < extra {
                 cap <<= 1;
             }
@@ -170,13 +184,6 @@ where
 {
     type Key = i64;
     type Value = V;
-
-    fn with_capacity(c: usize) -> Self {
-        Self {
-            offset: 0,
-            tree: BinaryIndexTree::with_capacity(c),
-        }
-    }
 
     fn insert(&mut self, key: Self::Key, val: Self::Value) {
         self.ensure_contains(key);

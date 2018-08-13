@@ -232,6 +232,12 @@ pub struct AARCumlTree<K, V> {
     root: Node<K, V>,
 }
 
+impl<K, V> AARCumlTree<K, V> {
+    pub fn new() -> Self {
+        AARCumlTree { root: Node::null() }
+    }
+}
+
 impl<K, V> Drop for AARCumlTree<K, V> {
     fn drop(&mut self) {
         unsafe { self.root.free(); }
@@ -245,10 +251,6 @@ where
 {
     type Key = K;
     type Value = V;
-
-    fn with_capacity(_k: usize) -> Self {
-        AARCumlTree { root: Node::null() }
-    }
 
     fn insert(&mut self, k: Self::Key, v: Self::Value) {
         self.root = Node::insert_node(self.root, k, v);
