@@ -41,6 +41,7 @@ test_trivial!(act_trivial, ArenaCumlTree::new());
 test_trivial!(aat_trivial, AACumlTree::new());
 test_trivial!(art_trivial, AARCumlTree::new());
 test_trivial!(rbt_trivial, RBCumlTree::new());
+test_trivial!(rct_trivial, RCCumlTree::new());
 
 macro_rules! test_small_neg_mono {
     ($testn:ident, $type:expr) => {
@@ -77,6 +78,7 @@ test_small_neg_mono!(act_small_neg_mono, ArenaCumlTree::new());
 test_small_neg_mono!(aat_small_neg_mono, AACumlTree::new());
 test_small_neg_mono!(art_small_neg_mono, AARCumlTree::new());
 test_small_neg_mono!(rbt_small_neg_mono, RBCumlTree::new());
+test_small_neg_mono!(rct_small_neg_mono, RCCumlTree::new());
 
 fn load_updates(fname: &str) -> (usize, Vec<i64>, Vec<i64>) {
     use std::fs::File;
@@ -143,6 +145,7 @@ bench_build!(act_build_1, i64,   "src/bench_1", ArenaCumlTree::new());
 bench_build!(aat_build_1, i64,   "src/bench_1", AACumlTree::new());
 bench_build!(art_build_1, i64,   "src/bench_1", AARCumlTree::new());
 bench_build!(rbt_build_1, i64,   "src/bench_1", RBCumlTree::new());
+bench_build!(rct_build_1, i64,   "src/bench_1", RCCumlTree::new());
 
 macro_rules! bench_getc {
     ($testn:ident, $k:ty, $fname:expr, $init:expr) => {
@@ -174,6 +177,7 @@ bench_getc!(act_getc_1, i64,   "src/bench_1", ArenaCumlTree::new());
 bench_getc!(aat_getc_1, i64,   "src/bench_1", AACumlTree::new());
 bench_getc!(art_getc_1, i64,   "src/bench_1", AARCumlTree::new());
 bench_getc!(rbt_getc_1, i64,   "src/bench_1", RBCumlTree::new());
+bench_getc!(rct_getc_1, i64,   "src/bench_1", RCCumlTree::new());
 
 macro_rules! bench_degen {
     ($testn:ident, $k:ty, $init:expr) => {
@@ -208,6 +212,7 @@ bench_degen!(act_build_degen, i64,   ArenaCumlTree::new());
 bench_degen!(aat_build_degen, i64,   AACumlTree::new());
 bench_degen!(art_build_degen, i64,   AARCumlTree::new());
 bench_degen!(rbt_build_degen, i64,   RBCumlTree::new());
+bench_degen!(rct_build_degen, i64,   RCCumlTree::new());
 
 macro_rules! bench_getc_degen {
     ($testn:ident, $k:ty, $init:expr) => {
@@ -238,6 +243,7 @@ bench_getc_degen!(act_getc_degen, i64,   ArenaCumlTree::new());
 bench_getc_degen!(aat_getc_degen, i64,   AACumlTree::new());
 bench_getc_degen!(art_getc_degen, i64,   AARCumlTree::new());
 bench_getc_degen!(rbt_getc_degen, i64,   RBCumlTree::new());
+bench_getc_degen!(rct_getc_degen, i64,   RCCumlTree::new());
 
 macro_rules! test_neg_key {
     ($testn:ident, $init:expr) => {
@@ -279,3 +285,4 @@ test_neg_key!(act_neg_key, ArenaCumlTree::new());
 test_neg_key!(aat_neg_key, AACumlTree::new());
 test_neg_key!(art_neg_key, AARCumlTree::new());
 test_neg_key!(rbt_neg_key, RBCumlTree::new());
+test_neg_key!(rct_neg_key, RCCumlTree::new());

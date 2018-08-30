@@ -24,5 +24,8 @@ pub use arne_raw::*;
 mod rbtree;
 pub use rbtree::*;
 
+mod rctree;
+pub use rctree::*;
+
 #[cfg(test)]
 mod tests;
