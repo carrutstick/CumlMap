@@ -116,7 +116,7 @@ impl<K, V> Node<K, V> {
 
     fn swap_child(&mut self, old: NodeRef<K, V>, new: NodeRef<K, V>) {
         if old == self.left {
-            self.right = new;
+            self.left = new;
         } else if old == self.right {
             self.right = new;
         } else {
@@ -215,93 +215,98 @@ impl<K, V> Drop for RCCumlTree<K, V> {
     }
 }
 
-/*
 impl<K, V> RCCumlTree<K, V>
 where
     K: Add<Output = K> + Sub<Output = K> + Zero + Copy + Ord,
     V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
 {
-    unsafe fn rb_fix(&mut self, mut n: NodeRef<K, V>) {
-        if n.parent().is_null() {
-            n.recolor(Color::Black);
-        } else if n.parent().color() == Color::Red {
-            let mut p = n.parent();
-            let mut g = p.parent(); // dad is red, so must have granddad
-            let mut u = g.other_child(p);
-            if u.is_null() {
-                if p == g.left() {
-                    self.right_rotate(g);
-                } else {
-                    self.left_rotate(g);
-                }
-                g.recolor(Color::Red);
-                p.recolor(Color::Black);
-            } else {
-                if u.color() == Color::Red {
-                    p.recolor(Color::Black);
-                    u.recolor(Color::Black);
-                    g.recolor(Color::Red);
-                    self.rb_fix(g);
-                } else {
-                    if n == g.left().right() {
-                        self.left_rotate(p);
-                        mem::swap(&mut p, &mut n);
-                    } else if n == g.right().left() {
-                        self.right_rotate(p);
-                        mem::swap(&mut p, &mut n);
-                    }
-
-                    if p == g.left() {
-                        self.right_rotate(g);
+    fn rb_fix(&mut self, np: NodeRef<K, V>) {
+        let nv = np.borrow_mut().unwrap();
+        let mut pp = nv.parent();
+        if let Some(mut pv) = pp.borrow_mut() {
+            if pv.color() == Color::Red {
+                let gp = pv.parent();
+                let gv = gp.borrow_mut().unwrap();
+                let up = gv.other_child(pp);
+                if let Some(uv) = up.borrow_mut() {
+                    if uv.color() == Color::Red {
+                        pv.recolor(Color::Black);
+                        uv.recolor(Color::Black);
+                        gv.recolor(Color::Red);
+                        self.rb_fix(gp);
                     } else {
-                        self.left_rotate(g);
+                        if gv.left_child_eq(pp) && pv.right_child_eq(np) {
+                            unsafe { self.left_rotate(pp) };
+                            pp = np;
+                            pv = nv;
+                        } else if gv.right_child_eq(pp) && pv.left_child_eq(np) {
+                            unsafe { self.right_rotate(pp) };
+                            pp = np;
+                            pv = nv;
+                        }
+                        if gv.left_child_eq(pp) {
+                            unsafe { self.right_rotate(gp) };
+                        } else {
+                            unsafe { self.left_rotate(gp) };
+                        }
+                        pv.recolor(Color::Black);
+                        gv.recolor(Color::Red);
                     }
-                    p.recolor(Color::Black);
-                    g.recolor(Color::Red);
+                } else {
+                    if gv.left_child_eq(pp) {
+                        unsafe { self.right_rotate(gp) };
+                    } else {
+                        unsafe { self.left_rotate(gp) };
+                    }
+                    gv.recolor(Color::Red);
+                    pv.recolor(Color::Black);
                 }
             }
+        } else {
+            nv.recolor(Color::Black);
         }
     }
 
-    unsafe fn left_rotate(&mut self, mut oldn: NodeRef<K, V>) {
-        let mut newn = oldn.right();
-        oldn.set_right(newn.left());
-        if !oldn.right().is_null() {
-            oldn.right().set_parent(oldn);
+    unsafe fn left_rotate(&mut self, oldn: NodeRef<K, V>) {
+        let oldnv = oldn.borrow_mut().unwrap();
+        let newn = oldnv.right();
+        let newnv = newn.borrow_mut().unwrap();
+        oldnv.set_right(newnv.left());
+        if let Some(r) = oldnv.right().borrow_mut() {
+            r.set_parent(oldn);
         }
-        newn.set_val(newn.val() + oldn.val());
-        let mut par = oldn.parent();
-        if par.is_null() {
-            self.root = newn;
-            newn.set_parent(NodeRef::null());
+        newnv.set_val(newnv.val() + oldnv.val());
+        if let Some(p) = oldnv.parent().borrow_mut() {
+            p.swap_child(oldn, newn);
+            newnv.set_parent(oldnv.parent());
         } else {
-            par.swap_child(oldn, newn);
-            newn.set_parent(par);
+            self.root = newn;
+            newnv.set_parent(NodeRef::null());
         }
-        newn.set_left(oldn);
-        oldn.set_parent(newn);
+        newnv.set_left(oldn);
+        oldnv.set_parent(newn);
     }
 
-    unsafe fn right_rotate(&mut self, mut oldn: NodeRef<K, V>) {
-        let mut newn = oldn.left();
-        oldn.set_left(newn.right());
-        if !oldn.left().is_null() {
-            oldn.left().set_parent(oldn);
+    unsafe fn right_rotate(&mut self, oldn: NodeRef<K, V>) {
+        let oldnv = oldn.borrow_mut().unwrap();
+        let newn = oldnv.left();
+        let newnv = newn.borrow_mut().unwrap();
+        oldnv.set_left(newnv.right());
+        if let Some(l) = oldnv.left().borrow_mut() {
+            l.set_parent(oldn);
         }
-        oldn.set_val(oldn.val() - newn.val());
-        let mut par = oldn.parent();
-        if par.is_null() {
-            self.root = newn;
-            newn.set_parent(NodeRef::null());
+        oldnv.set_val(oldnv.val() - newnv.val());
+        if let Some(p) = oldnv.parent().borrow_mut() {
+            p.swap_child(oldn, newn);
+            newnv.set_parent(oldnv.parent());
         } else {
-            par.swap_child(oldn, newn);
-            newn.set_parent(par);
+            self.root = newn;
+            newnv.set_parent(NodeRef::null());
         }
-        newn.set_right(oldn);
-        oldn.set_parent(newn);
+        newnv.set_right(oldn);
+        oldnv.set_parent(newn);
     }
 }
-*/
 
 impl<K, V> CumlMap for RCCumlTree<K, V>
 where
@@ -340,7 +345,7 @@ where
         } else {
             self.root = n;
         }
-        // self.rb_fix(n);
+        self.rb_fix(n);
     }
 
     fn get_cuml(&self, k: Self::Key) -> Self::Value {
