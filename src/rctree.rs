@@ -7,7 +7,7 @@ use std::cmp::{PartialEq, Eq, Ordering};
 use cmap::*;
 
 /*****************************************************************************
- * Cumulative frequency tree with raw pointers, Andressen balancing
+ * Cumulative frequency tree with raw pointers, Red-Black balancing
  *****************************************************************************/
 
 #[derive(PartialEq,Clone,Copy,Debug)]
@@ -16,7 +16,7 @@ enum Color {
     Black,
 }
 
-struct RCCumlNode<K, V> {
+struct CumlNode<K, V> {
     index: K,
     val: V,
     left: NodeRef<K, V>,
@@ -25,8 +25,8 @@ struct RCCumlNode<K, V> {
     color: Color,
 }
 
-type Node<K, V> = RCCumlNode<K, V>;
-struct NodeRef<K, V>(*mut RCCumlNode<K, V>);
+type Node<K, V> = CumlNode<K, V>;
+struct NodeRef<K, V>(*mut CumlNode<K, V>);
 
 impl<K, V> Clone for NodeRef<K, V> {
     fn clone(&self) -> NodeRef<K, V> {
@@ -50,7 +50,7 @@ impl<K, V> NodeRef<K, V> {
     }
 
     fn new(k: K, v: V, p: NodeRef<K, V>) -> NodeRef<K, V> {
-        NodeRef(Box::into_raw(Box::new(RCCumlNode {
+        NodeRef(Box::into_raw(Box::new(CumlNode {
             index: k,
             val: v,
             left: Self::null(),
@@ -199,23 +199,23 @@ where
     }
 }
 
-pub struct RCCumlTree<K, V> {
+pub struct CumlTree<K, V> {
     root: NodeRef<K, V>,
 }
 
-impl<K, V> RCCumlTree<K, V> {
+impl<K, V> CumlTree<K, V> {
     pub fn new() -> Self {
-        RCCumlTree { root: NodeRef::null() }
+        CumlTree { root: NodeRef::null() }
     }
 }
 
-impl<K, V> Drop for RCCumlTree<K, V> {
+impl<K, V> Drop for CumlTree<K, V> {
     fn drop(&mut self) {
         unsafe { self.root.free(); }
     }
 }
 
-impl<K, V> RCCumlTree<K, V>
+impl<K, V> CumlTree<K, V>
 where
     K: Add<Output = K> + Sub<Output = K> + Zero + Clone + Ord,
     V: Add<Output = V> + Sub<Output = V> + Zero + Clone + Ord,
@@ -308,7 +308,7 @@ where
     }
 }
 
-impl<K, V> CumlMap for RCCumlTree<K, V>
+impl<K, V> CumlMap for CumlTree<K, V>
 where
     K: Add<Output = K> + Sub<Output = K> + Zero + Clone + Ord,
     V: Add<Output = V> + Sub<Output = V> + Zero + Clone + Ord,

@@ -11,24 +11,24 @@ use cmap::*;
  * Binary Index Tree, per Peter Fenwick
  *****************************************************************************/
 
-pub struct BinaryIndexTree<V> {
+pub struct FenwickTree<V> {
     capacity: usize,
     data: Vec<V>,
 }
 
-impl<V> BinaryIndexTree<V>
+impl<V> FenwickTree<V>
 where
     V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
 {
-    pub fn with_capacity(c: usize) -> BinaryIndexTree<V> {
-        BinaryIndexTree {
+    pub fn with_capacity(c: usize) -> FenwickTree<V> {
+        FenwickTree {
             capacity: c,
             data: vec![V::zero(); c],
         }
     }
 }
 
-impl<V> CumlMap for BinaryIndexTree<V>
+impl<V> CumlMap for FenwickTree<V>
 where
     V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
 {
@@ -102,33 +102,33 @@ where
  * Extensible Binary Index Tree, allowing negative indices
  ****************************************************************************/
 
-pub struct ExtensibleBinaryIndexTree<V> {
+pub struct ExtensibleFenwickTree<V> {
     offset: i64, // minimum possible key in mapping
-    tree: BinaryIndexTree<V>,
+    tree: FenwickTree<V>,
 }
 
-impl<V> ExtensibleBinaryIndexTree<V>
+impl<V> ExtensibleFenwickTree<V>
 where
     V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord + Debug,
 {
     pub fn new() -> Self {
         Self {
             offset: 0,
-            tree: BinaryIndexTree::with_capacity(0),
+            tree: FenwickTree::with_capacity(0),
         }
     }
 
     pub fn with_capacity(c: usize) -> Self {
         Self {
             offset: 0,
-            tree: BinaryIndexTree::with_capacity(c),
+            tree: FenwickTree::with_capacity(c),
         }
     }
 
     pub fn with_extent(o: i64, c: usize) -> Self {
         Self {
             offset: o,
-            tree: BinaryIndexTree::with_capacity(c),
+            tree: FenwickTree::with_capacity(c),
         }
     }
 
@@ -139,7 +139,7 @@ where
     fn extend(&mut self, by: i64) {
         let oldcap = self.tree.capacity;
         let cap = oldcap + by.abs() as usize;
-        let new = BinaryIndexTree::with_capacity(cap);
+        let new = FenwickTree::with_capacity(cap);
         let old = mem::replace(&mut self.tree, new);
         let oldoff = self.offset;
         self.offset += cmp::min(by, 0);
@@ -162,7 +162,7 @@ where
     }
 }
 
-impl<V> CumlMap for ExtensibleBinaryIndexTree<V>
+impl<V> CumlMap for ExtensibleFenwickTree<V>
 where
     V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord + Debug,
 {

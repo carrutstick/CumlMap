@@ -34,14 +34,9 @@ macro_rules! test_trivial {
     };
 }
 
-test_trivial!(bix_trivial, BinaryIndexTree::with_capacity(5));
-test_trivial!(eix_trivial, ExtensibleBinaryIndexTree::new());
-test_trivial!(dct_trivial, BoxedCumlTree::new());
-test_trivial!(act_trivial, ArenaCumlTree::new());
-test_trivial!(aat_trivial, AACumlTree::new());
-test_trivial!(art_trivial, AARCumlTree::new());
-test_trivial!(rbt_trivial, RBCumlTree::new());
-test_trivial!(rct_trivial, RCCumlTree::new());
+test_trivial!(ftf_trivial, FenwickTree::with_capacity(5));
+test_trivial!(fte_trivial, ExtensibleFenwickTree::new());
+test_trivial!(rbt_trivial, CumlTree::new());
 
 macro_rules! test_small_neg_mono {
     ($testn:ident, $type:expr) => {
@@ -71,14 +66,9 @@ macro_rules! test_small_neg_mono {
     };
 }
 
-test_small_neg_mono!(bix_small_neg_mono, BinaryIndexTree::with_capacity(5));
-test_small_neg_mono!(eix_small_neg_mono, ExtensibleBinaryIndexTree::new());
-test_small_neg_mono!(dct_small_neg_mono, BoxedCumlTree::new());
-test_small_neg_mono!(act_small_neg_mono, ArenaCumlTree::new());
-test_small_neg_mono!(aat_small_neg_mono, AACumlTree::new());
-test_small_neg_mono!(art_small_neg_mono, AARCumlTree::new());
-test_small_neg_mono!(rbt_small_neg_mono, RBCumlTree::new());
-test_small_neg_mono!(rct_small_neg_mono, RCCumlTree::new());
+test_small_neg_mono!(ftf_small_neg_mono, FenwickTree::with_capacity(5));
+test_small_neg_mono!(fte_small_neg_mono, ExtensibleFenwickTree::new());
+test_small_neg_mono!(rbt_small_neg_mono, CumlTree::new());
 
 fn load_updates(fname: &str) -> (usize, Vec<i64>, Vec<i64>) {
     use std::fs::File;
@@ -137,15 +127,10 @@ macro_rules! bench_build {
     };
 }
 
-bench_build!(bix_build_1, usize, "src/bench_1", BinaryIndexTree::with_capacity(1000));
-bench_build!(eix_build_1, i64,   "src/bench_1", ExtensibleBinaryIndexTree::new());
-bench_build!(cix_build_1, i64,   "src/bench_1", ExtensibleBinaryIndexTree::with_capacity(1000));
-bench_build!(dct_build_1, i64,   "src/bench_1", BoxedCumlTree::new());
-bench_build!(act_build_1, i64,   "src/bench_1", ArenaCumlTree::new());
-bench_build!(aat_build_1, i64,   "src/bench_1", AACumlTree::new());
-bench_build!(art_build_1, i64,   "src/bench_1", AARCumlTree::new());
-bench_build!(rbt_build_1, i64,   "src/bench_1", RBCumlTree::new());
-bench_build!(rct_build_1, i64,   "src/bench_1", RCCumlTree::new());
+bench_build!(ftf_build_1, usize, "src/bench_1", FenwickTree::with_capacity(1000));
+bench_build!(fte_build_1, i64,   "src/bench_1", ExtensibleFenwickTree::new());
+bench_build!(ftc_build_1, i64,   "src/bench_1", ExtensibleFenwickTree::with_capacity(1000));
+bench_build!(rbt_build_1, i64,   "src/bench_1", CumlTree::new());
 
 macro_rules! bench_getc {
     ($testn:ident, $k:ty, $fname:expr, $init:expr) => {
@@ -169,15 +154,10 @@ macro_rules! bench_getc {
     };
 }
 
-bench_getc!(bix_getc_1, usize, "src/bench_1", BinaryIndexTree::with_capacity(1000));
-bench_getc!(eix_getc_1, i64,   "src/bench_1", ExtensibleBinaryIndexTree::new());
-bench_getc!(cix_getc_1, i64,   "src/bench_1", ExtensibleBinaryIndexTree::with_capacity(1000));
-bench_getc!(dct_getc_1, i64,   "src/bench_1", BoxedCumlTree::new());
-bench_getc!(act_getc_1, i64,   "src/bench_1", ArenaCumlTree::new());
-bench_getc!(aat_getc_1, i64,   "src/bench_1", AACumlTree::new());
-bench_getc!(art_getc_1, i64,   "src/bench_1", AARCumlTree::new());
-bench_getc!(rbt_getc_1, i64,   "src/bench_1", RBCumlTree::new());
-bench_getc!(rct_getc_1, i64,   "src/bench_1", RCCumlTree::new());
+bench_getc!(ftf_getc_1, usize, "src/bench_1", FenwickTree::with_capacity(1000));
+bench_getc!(fte_getc_1, i64,   "src/bench_1", ExtensibleFenwickTree::new());
+bench_getc!(ftc_getc_1, i64,   "src/bench_1", ExtensibleFenwickTree::with_capacity(1000));
+bench_getc!(rbt_getc_1, i64,   "src/bench_1", CumlTree::new());
 
 macro_rules! bench_degen {
     ($testn:ident, $k:ty, $init:expr) => {
@@ -204,15 +184,10 @@ macro_rules! bench_degen {
     };
 }
 
-bench_degen!(bix_build_degen, usize, BinaryIndexTree::with_capacity(1000));
-bench_degen!(eix_build_degen, i64,   ExtensibleBinaryIndexTree::new());
-bench_degen!(cix_build_degen, i64,   ExtensibleBinaryIndexTree::with_capacity(1000));
-bench_degen!(dct_build_degen, i64,   BoxedCumlTree::new());
-bench_degen!(act_build_degen, i64,   ArenaCumlTree::new());
-bench_degen!(aat_build_degen, i64,   AACumlTree::new());
-bench_degen!(art_build_degen, i64,   AARCumlTree::new());
-bench_degen!(rbt_build_degen, i64,   RBCumlTree::new());
-bench_degen!(rct_build_degen, i64,   RCCumlTree::new());
+bench_degen!(ftf_build_degen, usize, FenwickTree::with_capacity(1000));
+bench_degen!(fte_build_degen, i64,   ExtensibleFenwickTree::new());
+bench_degen!(ftc_build_degen, i64,   ExtensibleFenwickTree::with_capacity(1000));
+bench_degen!(rbt_build_degen, i64,   CumlTree::new());
 
 macro_rules! bench_getc_degen {
     ($testn:ident, $k:ty, $init:expr) => {
@@ -235,15 +210,10 @@ macro_rules! bench_getc_degen {
     };
 }
 
-bench_getc_degen!(bix_getc_degen, usize, BinaryIndexTree::with_capacity(1000));
-bench_getc_degen!(eix_getc_degen, i64,   ExtensibleBinaryIndexTree::new());
-bench_getc_degen!(cix_getc_degen, i64,   ExtensibleBinaryIndexTree::with_capacity(1000));
-bench_getc_degen!(dct_getc_degen, i64,   BoxedCumlTree::new());
-bench_getc_degen!(act_getc_degen, i64,   ArenaCumlTree::new());
-bench_getc_degen!(aat_getc_degen, i64,   AACumlTree::new());
-bench_getc_degen!(art_getc_degen, i64,   AARCumlTree::new());
-bench_getc_degen!(rbt_getc_degen, i64,   RBCumlTree::new());
-bench_getc_degen!(rct_getc_degen, i64,   RCCumlTree::new());
+bench_getc_degen!(ftf_getc_degen, usize, FenwickTree::with_capacity(1000));
+bench_getc_degen!(fte_getc_degen, i64,   ExtensibleFenwickTree::new());
+bench_getc_degen!(ftc_getc_degen, i64,   ExtensibleFenwickTree::with_capacity(1000));
+bench_getc_degen!(rbt_getc_degen, i64,   CumlTree::new());
 
 macro_rules! test_neg_key {
     ($testn:ident, $init:expr) => {
@@ -279,10 +249,5 @@ macro_rules! test_neg_key {
     };
 }
 
-test_neg_key!(eix_neg_key, ExtensibleBinaryIndexTree::new());
-test_neg_key!(dct_neg_key, BoxedCumlTree::new());
-test_neg_key!(act_neg_key, ArenaCumlTree::new());
-test_neg_key!(aat_neg_key, AACumlTree::new());
-test_neg_key!(art_neg_key, AARCumlTree::new());
-test_neg_key!(rbt_neg_key, RBCumlTree::new());
-test_neg_key!(rct_neg_key, RCCumlTree::new());
+test_neg_key!(fte_neg_key, ExtensibleFenwickTree::new());
+test_neg_key!(rbt_neg_key, CumlTree::new());

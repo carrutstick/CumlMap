@@ -6,23 +6,8 @@ extern crate num_traits;
 mod cmap;
 pub use cmap::*;
 
-mod arena;
-pub use arena::*;
-
 mod bix;
 pub use bix::*;
-
-mod boxed;
-pub use boxed::*;
-
-mod arne;
-pub use arne::*;
-
-mod arne_raw;
-pub use arne_raw::*;
-
-mod rbtree;
-pub use rbtree::*;
 
 mod rctree;
 pub use rctree::*;
