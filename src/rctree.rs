@@ -114,6 +114,14 @@ impl<K, V> Node<K, V> {
         self.color = c
     }
 
+    fn left_child_eq(&self, other: NodeRef<K, V>) -> bool {
+        other == self.left
+    }
+
+    fn right_child_eq(&self, other: NodeRef<K, V>) -> bool {
+        other == self.right
+    }
+
     fn swap_child(&mut self, old: NodeRef<K, V>, new: NodeRef<K, V>) {
         if old == self.left {
             self.left = new;
@@ -133,32 +141,24 @@ impl<K, V> Node<K, V> {
             panic!("Trying to pick other child, but node given is not current child");
         }
     }
-
-    fn left_child_eq(&self, other: NodeRef<K, V>) -> bool {
-        other == self.left
-    }
-
-    fn right_child_eq(&self, other: NodeRef<K, V>) -> bool {
-        other == self.right
-    }
 }
 
-impl<K: Copy, V> Node<K, V> {
+impl<K: Clone, V> Node<K, V> {
     fn index(&self) -> K {
-        self.index
+        self.index.clone()
     }
 }
 
-impl<K, V: Copy> Node<K, V> {
+impl<K, V: Clone> Node<K, V> {
     fn val(&self) -> V {
-        self.val
+        self.val.clone()
     }
 }
 
 impl<K, V> Node<K, V>
 where
-    K: Add<Output = K> + Sub<Output = K> + Zero + Copy + Ord,
-    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
+    K: Add<Output = K> + Sub<Output = K> + Zero + Clone + Ord,
+    V: Add<Output = V> + Sub<Output = V> + Zero + Clone + Ord,
 {
     fn get_total(&self) -> V {
         match self.right().borrow_mut() {
@@ -217,8 +217,8 @@ impl<K, V> Drop for RCCumlTree<K, V> {
 
 impl<K, V> RCCumlTree<K, V>
 where
-    K: Add<Output = K> + Sub<Output = K> + Zero + Copy + Ord,
-    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
+    K: Add<Output = K> + Sub<Output = K> + Zero + Clone + Ord,
+    V: Add<Output = V> + Sub<Output = V> + Zero + Clone + Ord,
 {
     fn rb_fix(&mut self, np: NodeRef<K, V>) {
         let nv = np.borrow_mut().unwrap();
@@ -310,8 +310,8 @@ where
 
 impl<K, V> CumlMap for RCCumlTree<K, V>
 where
-    K: Add<Output = K> + Sub<Output = K> + Zero + Copy + Ord,
-    V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
+    K: Add<Output = K> + Sub<Output = K> + Zero + Clone + Ord,
+    V: Add<Output = V> + Sub<Output = V> + Zero + Clone + Ord,
 {
     type Key = K;
     type Value = V;
@@ -323,19 +323,19 @@ where
             p = n;
             match k.cmp(&nv.index()) {
                 Ordering::Less => {
-                    nv.set_val(nv.val() + v);
+                    nv.set_val(nv.val() + v.clone());
                     n = nv.left();
                 },
                 Ordering::Greater => {
                     n = nv.right();
                 },
                 Ordering::Equal => {
-                    nv.set_val(nv.val() + v);
+                    nv.set_val(nv.val() + v.clone());
                     return
                 },
             }
         }
-        n = NodeRef::new(k, v, p);
+        n = NodeRef::new(k.clone(), v.clone(), p);
         if let Some(pv) = p.borrow_mut() {
             match k.cmp(&pv.index()) {
                 Ordering::Less => pv.set_left(n),
