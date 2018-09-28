@@ -2,6 +2,12 @@
 name = "cuml_map"
 version = "0.1.0"
 authors = ["Isaac Carruthers <isaac.carruthers@gmail.com>"]
+exclude = ["*.swp", "src/*.swp", "apikey"]
+description = "A trait representing cumulative mappings, and \
+               several implemntations of this trait."
+license = "MIT"
+license-file = "LICENSE"
+repository = "https://github.com/carrutstick/cuml_map"
 
 [dependencies]
 num-traits = "0.2"
