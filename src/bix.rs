@@ -11,6 +11,12 @@ use cmap::*;
  * Binary Index Tree, per Peter Fenwick
  *****************************************************************************/
 
+/// A Fenwick Tree[^fn] structure, useful for very quickly mapping a
+/// non-negative integer key to a cumulative value.
+///
+/// [^fn]: Peter M. Fenwick (1994). "A new data structure for cumulative
+/// frequency tables" (PDF). Software: Practice and Experience. 24 (3): 327–336.
+/// CiteSeerX 10.1.1.14.8917 Freely accessible. doi:10.1002/spe.4380240306
 pub struct FenwickTree<V> {
     capacity: usize,
     data: Vec<V>,
@@ -20,6 +26,7 @@ impl<V> FenwickTree<V>
 where
     V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
 {
+    /// Create a `FenwickTree` object with a fixed capacity.
     pub fn with_capacity(c: usize) -> FenwickTree<V> {
         FenwickTree {
             capacity: c,
@@ -48,8 +55,7 @@ where
     }
 
     fn get_cuml(&self, key: Self::Key) -> Self::Value {
-        assert!(key < self.capacity);
-        let mut key = key;
+        let mut key = cmp::min(key, self.capacity - 1);
         let mut sum = self.data[0];
         while key > 0 {
             sum = sum + self.data[key];
@@ -59,6 +65,7 @@ where
     }
 
     fn get_single(&self, key: Self::Key) -> Self::Value {
+        if key >= self.capacity { return Self::Value::zero() }
         let mut val = self.data[key];
         let mut key = key;
         if key == 0 {
@@ -102,6 +109,12 @@ where
  * Extensible Binary Index Tree, allowing negative indices
  ****************************************************************************/
 
+/// An extensible version of the Fenwick Tree. `ExtensibleFenwickTree` uses
+/// a `FenwickTree` internally, but applies an offset to any keys inserted
+/// or queried, allowing it to take negative keys. If a key is inserted
+/// that is outside the bounds of the underlying `FenwickTree`, then a new
+/// `FenwickTree` is created with sufficient capacity, all entries from the
+/// old tree are inserted into the new tree, and the old tree is dropped.
 pub struct ExtensibleFenwickTree<V> {
     offset: i64, // minimum possible key in mapping
     tree: FenwickTree<V>,
@@ -111,6 +124,7 @@ impl<V> ExtensibleFenwickTree<V>
 where
     V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord + Debug,
 {
+    /// Creates an empty tree with zero initial capacity.
     pub fn new() -> Self {
         Self {
             offset: 0,
@@ -118,6 +132,7 @@ where
         }
     }
 
+    /// Creates an empty tree with fixed initial capacity.
     pub fn with_capacity(c: usize) -> Self {
         Self {
             offset: 0,
@@ -125,6 +140,8 @@ where
         }
     }
 
+    /// Creates an empty tree with a capacity `c` and offset `o`, such that
+    /// the tree initially covers the range of keys `[o, o+c)`.
     pub fn with_extent(o: i64, c: usize) -> Self {
         Self {
             offset: o,
@@ -149,9 +166,12 @@ where
         }
     }
 
+    /// Ensures that the tree will cover key `key`, in addition to all keys
+    /// previously covered. Reallocates and rebuilds the tree if necessary.
     pub fn ensure_contains(&mut self, key: i64) {
         let (l, r) = self.extent();
-        let extra = if key >= r { key - r + 1 }
+        let extra =
+            if key >= r { key - r + 1 }
             else if key < l { key - l }
             else { return };
         let mut cap = cmp::max(8, self.tree.capacity as i64) * extra.signum();
@@ -175,14 +195,23 @@ where
     }
 
     fn get_cuml(&self, key: Self::Key) -> Self::Value {
-        self.tree.get_cuml((key - self.offset) as usize)
+        if self.offset > key {
+            Self::Value::zero()
+        } else {
+            self.tree.get_cuml((key - self.offset) as usize)
+        }
     }
 
     fn get_single(&self, key: Self::Key) -> Self::Value {
-        self.tree.get_single((key - self.offset) as usize)
+        if self.offset > key {
+            Self::Value::zero()
+        } else {
+            self.tree.get_single((key - self.offset) as usize)
+        }
     }
 
     fn get_quantile(&self, quant: Self::Value) -> Option<Self::Key> {
         self.tree.get_quantile(quant).map(|x| x as i64 + self.offset)
     }
 }
+

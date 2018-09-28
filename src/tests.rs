@@ -251,3 +251,16 @@ macro_rules! test_neg_key {
 
 test_neg_key!(fte_neg_key, ExtensibleFenwickTree::new());
 test_neg_key!(rbt_neg_key, CumlTree::new());
+
+// ExtensibleFenwickTree specific tests
+
+#[test]
+fn fte_oob_1() {
+    let mut t = ExtensibleFenwickTree::with_capacity(10);
+    t.insert(5, 5);
+    assert_eq!(t.get_cuml(-10), 0);
+    assert_eq!(t.get_single(-10), 0);
+    assert_eq!(t.get_cuml(10), 5);
+    assert_eq!(t.get_single(10), 0);
+}
+

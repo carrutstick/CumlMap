@@ -1,7 +1,7 @@
 [package]
 name = "cuml_map"
 version = "0.1.0"
-authors = ["Isaac Carruthers <isaacarruthers@gmail.com>"]
+authors = ["Isaac Carruthers <isaac.carruthers@gmail.com>"]
 
 [dependencies]
 num-traits = "0.2"

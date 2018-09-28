@@ -199,11 +199,14 @@ where
     }
 }
 
+/// The `CumlTree` type. An unbounded mapping between ordered keys and
+/// cumulative values, represented as a red-black tree.
 pub struct CumlTree<K, V> {
     root: NodeRef<K, V>,
 }
 
 impl<K, V> CumlTree<K, V> {
+    /// Create an empty `CumlTree` object.
     pub fn new() -> Self {
         CumlTree { root: NodeRef::null() }
     }
