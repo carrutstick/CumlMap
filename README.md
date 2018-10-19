@@ -1,4 +1,5 @@
 # cuml_map
+[![Docs.rs](https://docs.rs/cuml_map/badge.svg)](https://docs.rs/cuml_map)
 
 The goal of this library is to provide data structures that allow for efficient creation and querying of cumulative maps.
 That is, for some mapping `K -> V`, we want to make it quick and efficient for users to ask the following questions:
