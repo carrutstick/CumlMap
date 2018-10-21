@@ -264,3 +264,24 @@ fn fte_oob_1() {
     assert_eq!(t.get_single(10), 0);
 }
 
+macro_rules! test_oob_query {
+    ($testn:ident, $init:expr) => {
+        #[test]
+        fn $testn() {
+            let mut t = $init;
+            t.insert(3,2);
+
+            assert_eq!(t.get_cuml(15), 2);
+            assert_eq!(t.get_single(15), 0);
+
+            t.insert(9, 5);
+
+            // seven being the sum of the only two elements actually in the structure
+            assert_eq!(t.get_cuml(15), 7);
+            assert_eq!(t.get_single(15), 0);
+        }
+    }
+}
+
+test_oob_query!(fwt_oob_query, FenwickTree::with_capacity(10));
+test_oob_query!(eft_oob_query, ExtensibleFenwickTree::with_capacity(10));
