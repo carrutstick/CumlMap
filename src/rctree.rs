@@ -207,6 +207,13 @@ pub struct CumlTree<K, V> {
 
 impl<K, V> CumlTree<K, V> {
     /// Create an empty `CumlTree` object.
+    /// 
+    /// # Examples
+    /// ```
+    /// use cuml_map::CumlTree;
+    /// 
+    /// let ct: CumlTree<i32, i32> = CumlTree::new();
+    /// ```
     pub fn new() -> Self {
         CumlTree { root: NodeRef::null() }
     }

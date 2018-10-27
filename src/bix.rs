@@ -27,6 +27,13 @@ where
     V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord,
 {
     /// Create a `FenwickTree` object with a fixed capacity.
+    /// 
+    /// # Examples
+    /// ```
+    /// use cuml_map::FenwickTree as FT;
+    /// 
+    /// let ft: FT<u32> = FT::with_capacity(1234);
+    /// ```
     pub fn with_capacity(c: usize) -> FenwickTree<V> {
         FenwickTree {
             capacity: c,
@@ -125,6 +132,13 @@ where
     V: Add<Output = V> + Sub<Output = V> + Zero + Copy + Ord + Debug,
 {
     /// Creates an empty tree with zero initial capacity.
+    /// 
+    /// # Examples
+    /// ```
+    /// use cuml_map::ExtensibleFenwickTree as EFT;
+    /// 
+    /// let eft: EFT<u32> = EFT::new();
+    /// ```
     pub fn new() -> Self {
         Self {
             offset: 0,
@@ -133,6 +147,13 @@ where
     }
 
     /// Creates an empty tree with fixed initial capacity.
+    /// 
+    /// # Examples
+    /// ```
+    /// use cuml_map::ExtensibleFenwickTree as EFT;
+    /// 
+    /// let eft: EFT<u32> = EFT::with_capacity(1234);
+    /// ```
     pub fn with_capacity(c: usize) -> Self {
         Self {
             offset: 0,
@@ -142,6 +163,13 @@ where
 
     /// Creates an empty tree with a capacity `c` and offset `o`, such that
     /// the tree initially covers the range of keys `[o, o+c)`.
+    /// 
+    /// # Examples
+    /// ```
+    /// use cuml_map::ExtensibleFenwickTree as EFT;
+    /// 
+    /// let eft: EFT<u32> = EFT::with_extent(0, 1234);
+    /// ```
     pub fn with_extent(o: i64, c: usize) -> Self {
         Self {
             offset: o,
@@ -168,6 +196,17 @@ where
 
     /// Ensures that the tree will cover key `key`, in addition to all keys
     /// previously covered. Reallocates and rebuilds the tree if necessary.
+    /// 
+    /// # Examples
+    /// ```
+    /// use cuml_map::ExtensibleFenwickTree as EFT;
+    /// 
+    /// let mut eft1: EFT<u32> = EFT::new();
+    /// eft1.ensure_contains(1024);
+    /// 
+    /// let mut eft2: EFT<u32> = EFT::with_extent(0, 1234);
+    /// eft2.ensure_contains(1024);
+    /// ```
     pub fn ensure_contains(&mut self, key: i64) {
         let (l, r) = self.extent();
         let extra =
