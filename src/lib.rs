@@ -34,5 +34,8 @@ pub use bix::*;
 mod rctree;
 pub use rctree::*;
 
+mod avltree;
+pub use avltree::*;
+
 #[cfg(test)]
 mod tests;
