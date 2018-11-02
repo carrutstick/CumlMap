@@ -18,26 +18,9 @@ struct AVLNode<K, V> {
 }
 
 impl<K, V> AVLNode<K, V> {
-    fn new(key: K, val: V) -> AVLNode<K, V> {
-        AVLNode {
-            key: key,
-            val: val,
-            left: None,
-            right: None,
-            height: 1,
-            imbal: 0,
-        }
-    }
-
     fn fix_height(&mut self) {
-        let lh = match self.left {
-            Some(ref l) => l.height,
-            None => 0,
-        };
-        let rh = match self.right {
-            Some(ref r) => r.height,
-            None => 0,
-        };
+        let lh = get_height(&self.left);
+        let rh = get_height(&self.right);
         self.height = 1 + cmp::max(lh, rh);
         self.imbal = (rh as i64 - lh as i64) as i32;
     }
@@ -48,94 +31,162 @@ where
     V: Add<Output = V> + Sub<Output = V> + Zero + Clone,
 {
     fn get_total(&self) -> V {
-        self.val.clone() + if let Some(ref r) = self.right {
-            r.get_total()
-        } else {
-            V::zero()
-        }
-    }
-
-    fn left_rotate(mut self) -> ONode<K, V> {
-        let mut r = self.right.take()
-            .expect("left_rotate called with no right child");
-        r.val = r.val + self.get_total();
-        self.right = r.left.take();
-        self.fix_height();
-        r.left = Some(Box::new(self));
-        r.fix_height();
-        Some(r)
-    }
-
-    fn right_rotate(mut self) -> ONode<K, V> {
-        let mut l = self.left.take()
-            .expect("left_rotate called with no right child");
-        self.val = self.val - l.val.clone();
-        self.left = l.right.take();
-        self.fix_height();
-        l.right = Some(Box::new(self));
-        l.fix_height();
-        Some(l)
-    }
-
-    fn left_right_rotate(mut self) -> ONode<K, V> {
-        let l = self.left.take()
-            .expect("left_right_rotate called with no left child");
-        self.left = l.left_rotate();
-        self.right_rotate()
-    }
-
-    fn right_left_rotate(mut self) -> ONode<K, V> {
-        let r = self.right.take()
-            .expect("right_left_rotate called with no right child");
-        self.right = r.right_rotate();
-        self.left_rotate()
-    }
-
-    fn rebalance(self) -> ONode<K, V> {
-        if self.imbal > 1 {
-            if self.right.as_ref().unwrap().imbal < 0 {
-                self.right_left_rotate()
-            } else {
-                self.left_rotate()
-            }
-        } else if self.imbal < -1 {
-            if self.left.as_ref().unwrap().imbal > 0 {
-                self.left_right_rotate()
-            } else {
-                self.right_rotate()
-            }
-        } else {
-            Some(Box::new(self))
-        }
+        self.val.clone() + get_total(&self.right)
     }
 }
 
-impl<K, V> AVLNode<K, V>
+//-------------------------------------------------------------------
+// Structure-only ONode functions
+
+fn newONode<K, V>(key: K, val: V) -> ONode<K, V> {
+    Some(Box::new(AVLNode {
+        key: key,
+        val: val,
+        left: None,
+        right: None,
+        height: 1,
+        imbal: 0,
+    }))
+}
+
+fn get_height<K, V>(onode: &ONode<K, V>) -> usize {
+    if let &Some(ref node) = onode {
+        node.height
+    } else {
+        0
+    }
+}
+
+fn fix_height<K, V>(onode: &mut ONode<K, V>) {
+    if let Some(ref mut node) = onode {
+        node.fix_height();
+    }
+}
+
+//-------------------------------------------------------------------
+// Functions which manipulate values
+
+fn get_total<K, V>(onode: &ONode<K, V>) -> V
+where
+    V: Add<Output = V> + Sub<Output = V> + Zero + Clone,
+{
+    if let Some(ref node) = onode {
+        node.get_total()
+    } else {
+        V::zero()
+    }
+}
+
+fn left_rotate<K, V>(mut onode: ONode<K, V>) -> ONode<K, V>
+where
+    V: Add<Output = V> + Sub<Output = V> + Zero + Clone,
+{
+    let mut node = onode.as_mut()
+        .expect("left_rotate called on empty node");
+    let mut r = node.right.take()
+        .expect("left_rotate called with no right child");
+    node.right = r.left.take();
+    node.fix_height();
+    r.val = r.val + node.get_total();
+    r.left = onode;
+    r.fix_height();
+    Some(r)
+}
+
+fn right_rotate<K, V>(mut onode: ONode<K, V>) -> ONode<K, V>
+where
+    V: Add<Output = V> + Sub<Output = V> + Zero + Clone,
+{
+    let mut node = onode.as_mut()
+        .expect("right_rotate called on empty node");
+    let mut l = node.left.take()
+        .expect("right_rotate called with no left child");
+    node.left = l.right.take();
+    node.fix_height();
+    node.val = node.val.clone() - l.val.clone();
+    l.right = onode;
+    l.fix_height();
+    Some(l)
+}
+
+fn left_right_rotate<K, V>(mut onode: ONode<K, V>) -> ONode<K, V>
+where
+    V: Add<Output = V> + Sub<Output = V> + Zero + Clone,
+{
+    let node = onode.as_mut()
+        .expect("left_right_rotate called on empty node");
+    let l = node.left.take();
+    node.left = left_rotate(l);
+    right_rotate(onode)
+}
+
+fn right_left_rotate<K, V>(mut onode: ONode<K, V>) -> ONode<K, V>
+where
+    V: Add<Output = V> + Sub<Output = V> + Zero + Clone,
+{
+    let node = onode.as_mut()
+        .expect("right_left_rotate called on empty node");
+    let r = node.right.take();
+    node.right = right_rotate(r);
+    left_rotate(onode)
+}
+
+fn rebalance<K, V>(mut onode: ONode<K, V>) -> ONode<K, V>
+where
+    V: Add<Output = V> + Sub<Output = V> + Zero + Clone,
+{
+    if let Some(node) = &onode {
+        if node.imbal > 1 {
+            if node.right.as_ref().unwrap().imbal < 0 {
+                right_left_rotate(onode)
+            } else {
+                left_rotate(onode)
+            }
+        } else if node.imbal < -1 {
+            if node.left.as_ref().unwrap().imbal > 0 {
+                left_right_rotate(onode)
+            } else {
+                right_rotate(onode)
+            }
+        } else {
+            onode
+        }
+    } else {
+        onode
+    }
+}
+
+//-------------------------------------------------------------------
+// 
+
+fn insert<K, V>(mut onode: ONode<K, V>, key: K, val: V) -> ONode<K, V>
 where
     K: Add<Output = K> + Sub<Output = K> + Zero + Clone + Ord,
     V: Add<Output = V> + Sub<Output = V> + Zero + Clone + Ord,
 {
-    fn insert(mut self, key: K, val: V) -> ONode<K, V> {
-        match (key.cmp(&self.key), &mut self.left, &mut self.right) {
+    if let Some(node) = onode.as_mut() {
+        match (key.cmp(&node.key), &mut node.left, &mut node.right) {
             (Ordering::Less, Some(_), _) => {
-                self.val = self.val.clone() + val.clone();
-                self.left = self.left.take().unwrap().insert(key, val);
+                node.val = node.val.clone() + val.clone();
+                node.left = insert(node.left.take(), key, val);
             },
             (Ordering::Less, _, _) => {
-                self.left = Some(Box::new(AVLNode::new(key, val)));
+                node.left = newONode(key, val);
             },
             (Ordering::Greater, _, Some(ref mut r)) => {
-                self.right = self.right.take().unwrap().insert(key, val);
+                node.right = insert(node.right.take(), key, val);
             },
             (Ordering::Greater, _, _) => {
-                self.right = Some(Box::new(AVLNode::new(key, val)));
+                node.right = newONode(key, val);
             },
             (Ordering::Equal, _, _) => {
-                self.val = self.val.clone() + val;
+                node.val = node.val.clone() + val;
             },
         }
-        self.fix_height();
-        self.rebalance()
+        node.fix_height();
+        rebalance(onode)
+    } else {
+        newONode(key, val)
     }
 }
 
@@ -160,11 +211,7 @@ where
     type Value = V;
 
     fn insert(&mut self, key: K, val: V) {
-        self.root = if let Some(node) = self.root.take() {
-            node.insert(key, val)
-        } else {
-            Some(Box::new(AVLNode::new(key, val)))
-        }
+        self.root = insert(self.root.take(), key, val)
     }
 
     fn get_cuml(&self, key: K) -> V {
