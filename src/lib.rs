@@ -37,5 +37,8 @@ pub use rctree::*;
 mod avltree;
 pub use avltree::*;
 
+mod aavltree;
+pub use aavltree::*;
+
 #[cfg(test)]
 mod tests;
