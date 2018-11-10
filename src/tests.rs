@@ -3,10 +3,10 @@ use self::test::Bencher;
 use super::*;
 
 macro_rules! test_trivial {
-    ($testn:ident, $type:expr) => {
+    ($testn:ident, $init:expr) => {
         #[test]
         fn $testn() {
-            let mut t = $type;
+            let mut t = $init;
             t.insert(0, 1);
             t.insert(1, 2);
             t.insert(2, 3);
@@ -37,12 +37,13 @@ macro_rules! test_trivial {
 test_trivial!(ftf_trivial, FenwickTree::with_capacity(5));
 test_trivial!(fte_trivial, ExtensibleFenwickTree::new());
 test_trivial!(rbt_trivial, CumlTree::new());
+test_trivial!(aav_trivial, AAVLTree::new());
 
 macro_rules! test_small_neg_mono {
-    ($testn:ident, $type:expr) => {
+    ($testn:ident, $init:expr) => {
         #[test]
         fn $testn() {
-            let mut t = $type;
+            let mut t = $init;
             t.insert(0, -3);
             t.insert(1, -1);
             t.insert(2, 3);
@@ -69,6 +70,7 @@ macro_rules! test_small_neg_mono {
 test_small_neg_mono!(ftf_small_neg_mono, FenwickTree::with_capacity(5));
 test_small_neg_mono!(fte_small_neg_mono, ExtensibleFenwickTree::new());
 test_small_neg_mono!(rbt_small_neg_mono, CumlTree::new());
+test_small_neg_mono!(aav_small_neg_mono, AAVLTree::new());
 
 fn load_updates(fname: &str) -> (usize, Vec<i64>, Vec<i64>) {
     use std::fs::File;
@@ -131,6 +133,7 @@ bench_build!(ftf_build_1, usize, "src/bench_1", FenwickTree::with_capacity(1000)
 bench_build!(fte_build_1, i64,   "src/bench_1", ExtensibleFenwickTree::new());
 bench_build!(ftc_build_1, i64,   "src/bench_1", ExtensibleFenwickTree::with_capacity(1000));
 bench_build!(rbt_build_1, i64,   "src/bench_1", CumlTree::new());
+bench_build!(aav_build_1, i64,   "src/bench_1", AAVLTree::new());
 
 macro_rules! bench_getc {
     ($testn:ident, $k:ty, $fname:expr, $init:expr) => {
@@ -158,6 +161,7 @@ bench_getc!(ftf_getc_1, usize, "src/bench_1", FenwickTree::with_capacity(1000));
 bench_getc!(fte_getc_1, i64,   "src/bench_1", ExtensibleFenwickTree::new());
 bench_getc!(ftc_getc_1, i64,   "src/bench_1", ExtensibleFenwickTree::with_capacity(1000));
 bench_getc!(rbt_getc_1, i64,   "src/bench_1", CumlTree::new());
+bench_getc!(aav_getc_1, i64,   "src/bench_1", AAVLTree::new());
 
 macro_rules! bench_degen {
     ($testn:ident, $k:ty, $init:expr) => {
@@ -188,6 +192,7 @@ bench_degen!(ftf_build_degen, usize, FenwickTree::with_capacity(1000));
 bench_degen!(fte_build_degen, i64,   ExtensibleFenwickTree::new());
 bench_degen!(ftc_build_degen, i64,   ExtensibleFenwickTree::with_capacity(1000));
 bench_degen!(rbt_build_degen, i64,   CumlTree::new());
+bench_degen!(aav_build_degen, i64,   AAVLTree::new());
 
 macro_rules! bench_getc_degen {
     ($testn:ident, $k:ty, $init:expr) => {
@@ -214,6 +219,7 @@ bench_getc_degen!(ftf_getc_degen, usize, FenwickTree::with_capacity(1000));
 bench_getc_degen!(fte_getc_degen, i64,   ExtensibleFenwickTree::new());
 bench_getc_degen!(ftc_getc_degen, i64,   ExtensibleFenwickTree::with_capacity(1000));
 bench_getc_degen!(rbt_getc_degen, i64,   CumlTree::new());
+bench_getc_degen!(aav_getc_degen, i64,   AAVLTree::new());
 
 macro_rules! test_neg_key {
     ($testn:ident, $init:expr) => {
@@ -251,6 +257,7 @@ macro_rules! test_neg_key {
 
 test_neg_key!(fte_neg_key, ExtensibleFenwickTree::new());
 test_neg_key!(rbt_neg_key, CumlTree::new());
+test_neg_key!(aav_neg_key, AAVLTree::new());
 
 // ExtensibleFenwickTree specific tests
 

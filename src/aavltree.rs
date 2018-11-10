@@ -7,7 +7,8 @@ use std::mem;
 
 use cmap::*;
 
-struct AAVLTree<K, V> {
+#[derive(Debug)]
+pub struct AAVLTree<K, V> {
     nodes: Vec<AAVLNode<K, V>>,
     root: Option<usize>,
 }
@@ -23,14 +24,14 @@ struct AAVLNode<K, V> {
 }
 
 impl<K, V> AAVLTree<K, V> {
-    fn new() -> AAVLTree<K, V> {
+    pub fn new() -> AAVLTree<K, V> {
         AAVLTree {
             nodes: Vec::new(),
             root: None,
         }
     }
 
-    fn with_capacity(cap: usize) -> AAVLTree<K, V> {
+    pub fn with_capacity(cap: usize) -> AAVLTree<K, V> {
         AAVLTree {
             nodes: Vec::with_capacity(cap),
             root: None,
@@ -49,45 +50,21 @@ impl<K, V> AAVLTree<K, V> {
         });
         ix
     }
-}
 
-macro_rules! get {
-    ($tree: ident, $ix: expr) => (
-        (unsafe { $tree.nodes.get_unchecked($ix) })
-    )
-}
-macro_rules! get_mut {
-    ($tree: ident, $ix: expr) => (
-        (unsafe { $tree.nodes.get_unchecked_mut($ix) })
-    )
-}
-/*
-macro_rules! get {
-    ($tree: ident, $ix: expr) => (
-        (unsafe { $tree.nodes.get($ix).unwrap() })
-    )
-}
-macro_rules! get_mut {
-    ($tree: ident, $ix: expr) => (
-        (unsafe { $tree.nodes.get_mut($ix).unwrap() })
-    )
-}
-*/
+    fn get(&self, ix: usize) -> &AAVLNode<K, V> {
+        unsafe { self.nodes.get_unchecked(ix) }
+    }
 
-impl<K, V> AAVLNode<K, V>
-where
-    V: Add<Output = V> + Sub<Output = V> + Zero + Clone,
-{
-    fn get_total(&self, tree: &AAVLTree<K, V>) -> V {
-        self.val.clone() + self.right.map_or(V::zero(), |r| get!(tree, r).get_total(tree))
+    fn get_mut(&mut self, ix: usize) -> &mut AAVLNode<K, V> {
+        unsafe { self.nodes.get_unchecked_mut(ix) }
     }
 }
 
 impl<K, V> AAVLTree<K, V> {
     fn fix_height(&mut self, ix: usize) {
-        let lh = get!(self, ix).left.map_or(0, |l| get!(self, l).height);
-        let rh = get!(self, ix).right.map_or(0, |r| get!(self, r).height);
-        let node = get_mut!(self, ix);
+        let lh = self.get(ix).left.map_or(0, |l| self.get(l).height);
+        let rh = self.get(ix).right.map_or(0, |r| self.get(r).height);
+        let node = self.get_mut(ix);
         node.height = 1 + cmp::max(lh, rh);
         node.bal = rh as i32 - lh as i32;
     }
@@ -95,51 +72,56 @@ impl<K, V> AAVLTree<K, V> {
 
 impl<K, V> AAVLTree<K, V>
 where
-    V: Add<Output = V> + Sub<Output = V> + Zero + Clone,
+    V: Add<Output = V> + Sub<Output = V> + Zero + Ord + Clone,
     K: Ord + Clone,
 {
+    fn get_total(&self, ix: usize) -> V {
+        let cur = self.get(ix);
+        cur.val.clone() + cur.right.map_or(V::zero(), |r| self.get_total(r))
+    }
+
     fn left_rotate(&mut self, ix: usize) -> usize {
-        let rix = get_mut!(self, ix).right.take().unwrap();
-        get_mut!(self, ix).right = get_mut!(self, rix).left.take();
-        get_mut!(self, rix).left = Some(ix);
+        let rix = self.get_mut(ix).right.take().unwrap();
+        self.get_mut(ix).right = self.get_mut(rix).left.take();
+        self.get_mut(rix).left = Some(ix);
         self.fix_height(ix);
         self.fix_height(rix);
-        get_mut!(self, rix).val = get!(self, rix).val.clone() + get!(self, ix).get_total(self);
+        self.get_mut(rix).val = self.get(rix).val.clone() + self.get(ix).val.clone();
         rix
     }
 
     fn right_rotate(&mut self, ix: usize) -> usize {
-        let lix = get_mut!(self, ix).left.take().unwrap();
-        get_mut!(self, ix).left = get_mut!(self, lix).right.take();
-        get_mut!(self, lix).right = Some(ix);
+        let lix = self.get_mut(ix).left.take().unwrap();
+        self.get_mut(ix).left = self.get_mut(lix).right.take();
+        self.get_mut(lix).right = Some(ix);
         self.fix_height(ix);
         self.fix_height(lix);
-        get_mut!(self, ix).val = get!(self, ix).val.clone() - get!(self, lix).val.clone();
+        self.get_mut(ix).val = self.get(ix).val.clone() - self.get(lix).val.clone();
         lix
     }
 
     fn left_right_rotate(&mut self, ix: usize) -> usize {
-        get_mut!(self, ix).left = Some(self.left_rotate(get!(self, ix).left.unwrap()));
+        self.get_mut(ix).left = Some(self.left_rotate(self.get(ix).left.unwrap()));
         self.right_rotate(ix)
     }
 
     fn right_left_rotate(&mut self, ix: usize) -> usize {
-        get_mut!(self, ix).right = Some(self.right_rotate(get!(self, ix).right.unwrap()));
+        self.get_mut(ix).right = Some(self.right_rotate(self.get(ix).right.unwrap()));
         self.left_rotate(ix)
     }
 
     fn rebalance(&mut self, ix: usize) -> usize {
-        let bal = get!(self, ix).bal;
+        let bal = self.get(ix).bal;
         if bal > 1 {
-            let rix = get!(self, ix).right.unwrap();
-            if get!(self, rix).bal > 0 {
+            let rix = self.get(ix).right.unwrap();
+            if self.get(rix).bal > 0 {
                 self.left_rotate(ix)
             } else {
                 self.right_left_rotate(ix)
             }
         } else if bal < -1 {
-            let lix = get!(self, ix).left.unwrap();
-            if get!(self, lix).bal < 0 {
+            let lix = self.get(ix).left.unwrap();
+            if self.get(lix).bal < 0 {
                 self.right_rotate(ix)
             } else {
                 self.left_right_rotate(ix)
@@ -153,11 +135,11 @@ where
         let nxtnode = self.nodes.len();
         let mut mknode = false;
         let mut rebal = false;
-        let cur = get_mut!(self, ix);
+        let cur = self.get_mut(ix);
         match (key.cmp(&cur.key), cur.left, cur.right) {
             (Ordering::Less, Some(l), _) => {
                 cur.val = cur.val.clone() + val.clone();
-                get_mut!(self, ix).left = Some(self.rec_insert(l, key.clone(), val.clone()));
+                self.get_mut(ix).left = Some(self.rec_insert(l, key.clone(), val.clone()));
                 rebal = true;
             },
             (Ordering::Less, _, _) => {
@@ -166,7 +148,7 @@ where
                 cur.val = cur.val.clone() + val.clone();
             },
             (Ordering::Greater, _, Some(r)) => {
-                get_mut!(self, ix).right = Some(self.rec_insert(r, key.clone(), val.clone()));
+                self.get_mut(ix).right = Some(self.rec_insert(r, key.clone(), val.clone()));
                 rebal = true;
             },
             (Ordering::Greater, _, _) => {
@@ -182,6 +164,40 @@ where
         let res = if rebal { self.rebalance(ix) } else { ix };
         res
     }
+
+    fn rec_get_cuml(&self, ix: usize, key: K, acc: V) -> V {
+        let cur = self.get(ix);
+        match (key.cmp(&cur.key), cur.left, cur.right) {
+            (Ordering::Less, Some(l), _) => self.rec_get_cuml(l, key, acc),
+            (Ordering::Less, _, _) => acc,
+            (Ordering::Greater, _, Some(r)) => self.rec_get_cuml(r, key, acc + cur.val.clone()),
+            (_, _, _) => acc + cur.val.clone(),
+        }
+    }
+
+    fn rec_get_single(&self, ix: usize, key: K) -> V {
+        let cur = self.get(ix);
+        match (key.cmp(&cur.key), cur.left, cur.right) {
+            (Ordering::Less, Some(l), _) => self.rec_get_single(l, key),
+            (Ordering::Greater, _, Some(r)) => self.rec_get_single(r, key),
+            (Ordering::Equal, Some(l), _) => cur.val.clone() - self.get_total(l),
+            (Ordering::Equal, _, _) => cur.val.clone(),
+            (_, _, _) => V::zero(),
+        }
+    }
+
+    fn rec_get_quant(&self, ix: usize, v: V) -> Option<K> {
+        let cur = self.get(ix);
+        match (v.cmp(&cur.val), cur.left, cur.right) {
+            (Ordering::Less, Some(l), _) => match self.rec_get_quant(l, v) {
+                None => Some(cur.key.clone()),
+                s => s,
+            },
+            (Ordering::Greater, _, Some(r)) => self.rec_get_quant(r, v - cur.val.clone()),
+            (Ordering::Greater, _, _) => None,
+            (_, _, _) => Some(cur.key.clone()),
+        }
+    }
 }
 
 impl<K, V> CumlMap for AAVLTree<K, V>
@@ -193,52 +209,30 @@ where
     type Value = V;
 
     fn insert(&mut self, key: K, val: V) {
-        if let Some(node) = self.root {
-            self.root = Some(self.rec_insert(node, key, val));
-        } else {
-            self.root = Some(self.mknode(key, val));
+        match self.root {
+            Some(node) => self.root = Some(self.rec_insert(node, key, val)),
+            None => self.root = Some(self.mknode(key, val)),
         }
     }
 
     fn get_cuml(&self, key: K) -> V {
-        unimplemented!()
+        match self.root {
+            Some(node) => self.rec_get_cuml(node, key, V::zero()),
+            None => V::zero(),
+        }
     }
 
     fn get_single(&self, key: K) -> V {
-        unimplemented!()
+        match self.root {
+            Some(node) => self.rec_get_single(node, key),
+            None => V::zero(),
+        }
     }
 
     fn get_quantile(&self, quant: V) -> Option<K> {
-        unimplemented!()
-    }
-}
-
-#[cfg(test)]
-mod test {
-    extern crate test;
-    use self::test::Bencher;
-    use super::*;
-
-    #[bench]
-    fn aav_build_degen(b: &mut Bencher) {
-        b.iter(|| {
-            let mut cm = AAVLTree::<i64,i64>::with_capacity(1000);
-            for i in 0 .. 1000 {
-                cm.insert(i, i);
-            }
-        });
-    }
-
-    #[test]
-    fn aav_balance_test() {
-        let mut cm = AAVLTree::<i32,i32>::new();
-        cm.insert(1, 1);
-        cm.insert(2, 1);
-        cm.insert(3, 1);
-        cm.insert(4, 1);
-        cm.insert(5, 1);
-        cm.insert(6, 1);
-        cm.insert(7, 1);
-        assert_eq!(cm.nodes[cm.root.unwrap()].height, 3);
+        match self.root {
+            Some(node) => self.rec_get_quant(node, quant),
+            None => None,
+        }
     }
 }
