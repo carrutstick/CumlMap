@@ -13,6 +13,7 @@ type ONode<K, V> = Option<Box<AVLNode<K, V>>>;
 struct AVLNode<K, V> {
     key: K,
     val: V,
+    tot: V,
     left: ONode<K, V>,
     right: ONode<K, V>,
     height: usize,
@@ -28,22 +29,14 @@ impl<K, V> AVLNode<K, V> {
     }
 }
 
-impl<K, V> AVLNode<K, V>
-where
-    V: Add<Output = V> + Sub<Output = V> + Zero + Clone,
-{
-    fn get_total(&self) -> V {
-        self.val.clone() + get_total(&self.right)
-    }
-}
-
 //-------------------------------------------------------------------
-// Structure-only ONode functions
+// Structure and value-only ONode functions
 
-fn new_onode<K, V>(key: K, val: V) -> ONode<K, V> {
+fn new_onode<K, V: Clone>(key: K, val: V) -> ONode<K, V> {
     Some(Box::new(AVLNode {
         key: key,
-        val: val,
+        val: val.clone(),
+        tot: val,
         left: None,
         right: None,
         height: 1,
@@ -59,15 +52,12 @@ fn get_height<K, V>(onode: &ONode<K, V>) -> usize {
     }
 }
 
-//-------------------------------------------------------------------
-// Structure and value-only ONode functions
-
 fn get_total<K, V>(onode: &ONode<K, V>) -> V
 where
     V: Add<Output = V> + Sub<Output = V> + Zero + Clone,
 {
     if let Some(ref node) = onode {
-        node.get_total()
+        node.tot.clone()
     } else {
         V::zero()
     }
@@ -86,9 +76,11 @@ where
         .expect("left_rotate called with no right child");
     node.right = r.left.take();
     node.fix_height();
+    node.tot = node.val.clone() + get_total(&node.right);
     r.val = r.val.clone() + node.val.clone();
     r.left = oright;
     r.fix_height();
+    r.tot = r.val.clone() + get_total(&r.right);
 }
 
 fn right_rotate<K, V>(onode: &mut ONode<K, V>)
@@ -105,8 +97,10 @@ where
     node.left = l.right.take();
     node.fix_height();
     node.val = node.val.clone() - l.val.clone();
+    node.tot = node.val.clone() + get_total(&node.right);
     l.right = oleft;
     l.fix_height();
+    l.tot = l.tot.clone() + get_total(&l.right);
 }
 
 fn left_right_rotate<K, V>(onode: &mut ONode<K, V>)
@@ -159,6 +153,7 @@ where
     V: Add<Output = V> + Sub<Output = V> + Zero + Clone + Ord,
 {
     if let Some(node) = onode.as_mut() {
+        node.tot = node.tot.clone() + val.clone();
         match key.cmp(&node.key) {
             Ordering::Less => {
                 node.val = node.val.clone() + val.clone();
