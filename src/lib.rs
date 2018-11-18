@@ -40,5 +40,8 @@ pub use avltree::*;
 mod aavltree;
 pub use aavltree::*;
 
+mod arbtree;
+pub use arbtree::*;
+
 #[cfg(test)]
 mod tests;

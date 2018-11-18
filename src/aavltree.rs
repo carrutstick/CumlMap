@@ -3,7 +3,6 @@ use num_traits::Zero;
 use std::ops::{Add, Sub};
 use std::cmp::{Ordering};
 use std::cmp;
-use std::mem;
 
 use cmap::*;
 

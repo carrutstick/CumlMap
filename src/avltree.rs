@@ -9,6 +9,7 @@ use cmap::*;
 
 type ONode<K, V> = Option<Box<AVLNode<K, V>>>;
 
+#[derive(Debug)]
 struct AVLNode<K, V> {
     key: K,
     val: V,
@@ -39,7 +40,7 @@ where
 //-------------------------------------------------------------------
 // Structure-only ONode functions
 
-fn newONode<K, V>(key: K, val: V) -> ONode<K, V> {
+fn new_onode<K, V>(key: K, val: V) -> ONode<K, V> {
     Some(Box::new(AVLNode {
         key: key,
         val: val,
@@ -58,14 +59,8 @@ fn get_height<K, V>(onode: &ONode<K, V>) -> usize {
     }
 }
 
-fn fix_height<K, V>(onode: &mut ONode<K, V>) {
-    if let Some(ref mut node) = onode {
-        node.fix_height();
-    }
-}
-
 //-------------------------------------------------------------------
-// Functions which manipulate values
+// Structure and value-only ONode functions
 
 fn get_total<K, V>(onode: &ONode<K, V>) -> V
 where
@@ -86,12 +81,12 @@ where
         .expect("left_rotate called on empty node")
         .right.take();
     mem::swap(onode, &mut oright);
-    let mut node = oright.as_mut().unwrap();
-    let mut r = onode.as_mut()
+    let node = oright.as_mut().unwrap();
+    let r = onode.as_mut()
         .expect("left_rotate called with no right child");
     node.right = r.left.take();
     node.fix_height();
-    r.val = r.val.clone() + node.get_total();
+    r.val = r.val.clone() + node.val.clone();
     r.left = oright;
     r.fix_height();
 }
@@ -104,8 +99,8 @@ where
         .expect("right_rotate called on empty node")
         .left.take();
     mem::swap(onode, &mut oleft);
-    let mut node = oleft.as_mut().unwrap();
-    let mut l = onode.as_mut()
+    let node = oleft.as_mut().unwrap();
+    let l = onode.as_mut()
         .expect("right_rotate called with no left child");
     node.left = l.right.take();
     node.fix_height();
@@ -156,14 +151,14 @@ where
 }
 
 //-------------------------------------------------------------------
-// 
+// Core CumlMap functionality
 
 fn insert<K, V>(onode: &mut ONode<K, V>, key: K, val: V)
 where
     K: Add<Output = K> + Sub<Output = K> + Zero + Clone + Ord,
     V: Add<Output = V> + Sub<Output = V> + Zero + Clone + Ord,
 {
-    if let Some(mut node) = onode.as_mut() {
+    if let Some(node) = onode.as_mut() {
         match key.cmp(&node.key) {
             Ordering::Less => {
                 node.val = node.val.clone() + val.clone();
@@ -179,9 +174,63 @@ where
         node.fix_height();
         rebalance(onode);
     } else {
-        mem::swap(onode, &mut newONode(key, val))
+        mem::swap(onode, &mut new_onode(key, val))
     }
 }
+
+fn get_cuml<K, V>(onode: &ONode<K, V>, key: K, acc: V) -> V
+where
+    K: Add<Output = K> + Sub<Output = K> + Zero + Clone + Ord,
+    V: Add<Output = V> + Sub<Output = V> + Zero + Clone + Ord,
+{
+    if let Some(node) = onode.as_ref() {
+        match key.cmp(&node.key) {
+            Ordering::Less => get_cuml(&node.left, key, acc),
+            Ordering::Greater => get_cuml(&node.right, key, acc + node.val.clone()),
+            Ordering::Equal => acc + node.val.clone(),
+        }
+    } else {
+        acc
+    }
+}
+
+fn get_single<K, V>(onode: &ONode<K, V>, key: K) -> V
+where
+    K: Add<Output = K> + Sub<Output = K> + Zero + Clone + Ord,
+    V: Add<Output = V> + Sub<Output = V> + Zero + Clone + Ord,
+{
+    if let Some(node) = onode.as_ref() {
+        match key.cmp(&node.key) {
+            Ordering::Less => get_single(&node.left, key),
+            Ordering::Greater => get_single(&node.right, key),
+            Ordering::Equal => node.val.clone() - get_total(&node.left),
+        }
+    } else {
+        V::zero()
+    }
+}
+
+fn get_quantile<K, V>(onode: &ONode<K, V>, quant: V) -> Option<K>
+where
+    K: Add<Output = K> + Sub<Output = K> + Zero + Clone + Ord,
+    V: Add<Output = V> + Sub<Output = V> + Zero + Clone + Ord,
+{
+    if let Some(node) = onode.as_ref() {
+        match quant.cmp(&node.val) {
+            Ordering::Greater => get_quantile(&node.right, quant - node.val.clone()),
+            Ordering::Equal => Some(node.key.clone()),
+            Ordering::Less => match get_quantile(&node.left, quant) {
+                None => Some(node.key.clone()),
+                some => some,
+            },
+        }
+    } else {
+        None
+    }
+}
+
+//-------------------------------------------------------------------
+// The tree itself
 
 pub struct AVLTree<K, V> {
     root: ONode<K, V>,
@@ -208,47 +257,14 @@ where
     }
 
     fn get_cuml(&self, key: K) -> V {
-        unimplemented!()
+        get_cuml(&self.root, key, V::zero())
     }
 
     fn get_single(&self, key: K) -> V {
-        unimplemented!()
+        get_single(&self.root, key)
     }
 
     fn get_quantile(&self, quant: V) -> Option<K> {
-        unimplemented!()
-    }
-}
-
-#[cfg(test)]
-mod test {
-    extern crate test;
-    use self::test::Bencher;
-    use super::*;
-
-    #[bench]
-    fn avl_build_degen(b: &mut Bencher) {
-        b.iter(|| {
-            let mut cm = AVLTree::<i64,i64>::new();
-            for i in 0 .. 1000 {
-                cm.insert(i, i);
-            }
-        });
-    }
-
-    #[test]
-    fn avl_balance_test() {
-        let mut cm = AVLTree::<i32,i32>::new();
-        cm.insert(1, 1);
-        cm.insert(2, 1);
-        cm.insert(3, 1);
-        cm.insert(4, 1);
-        cm.insert(5, 1);
-        cm.insert(6, 1);
-        cm.insert(7, 1);
-        assert_eq!(cm.root.as_ref().unwrap().height, 3);
-        assert_eq!(cm.root.as_ref().unwrap().imbal, 0);
-        assert_eq!(cm.root.as_ref().unwrap().key, 4);
-        assert_eq!(cm.root.as_ref().unwrap().right.as_ref().unwrap().key, 6);
+        get_quantile(&self.root, quant)
     }
 }
